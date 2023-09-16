@@ -24,13 +24,23 @@ This is an Ashita v4 addon that acts as a tracker for clamming in FFXI; specific
 /hxiclam clear - Clears the clamming bucket and session data
 
 ## Pricing
-Pricing for items is listed under the configuration window under the Items tab. Make sure the format is as follows:
+Pricing for items is listed in the configuration window under the Item Price tab. Make sure the format is as follows:
 
-**Format**: itemname:itemprice
+**Format:** itemname:itemprice
 
 **Example:** pebble:100
 
-This would price pebbles at 100g.  Make sure there are no spaces or commas in any of the lines.
+This would price pebbles at 100g.  Make sure there are no spaces or commas in any of the lines and the text is in lowercase.
 
-If you update the prices while in game, make sure to use the **/hxiclam update** command to update the prices.
+If you update the prices while in game, make sure to use the **/hxiclam update** or **/hxiclam update pricing** command to update the prices.
 
+## Weights
+Weights for items are listed in the configuration window under the Item Weight tab. Make sure the format is as follows:
+
+**Format:** itemname:itemweight
+
+**Example:** pebble:7
+
+This would set the weight for pebbles at 7 pz. Make sure there are no spaces or commas in any of the lines and the text is in lowercase.
+
+If you update the weights while in game, make sure to use the **/hxiclam update** or **/hxiclam update weights** command to update the weights.
