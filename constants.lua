@@ -206,7 +206,7 @@ ItemIndex = T{
 	[30] = "titanictus shell:358",
 	[31] = "tropical clam:5227",
 	[32] = "turtle shell:1254",
-	[33] = "urganite shell:1455",
+	[33] = "uragnite shell:1455",
 	[34] = "vongola clam:196",
 	[35] = "sack of white sand:256",
 };
@@ -245,7 +245,7 @@ ItemWeightIndex = T{
 	[30] = "titanictus shell:6",
 	[31] = "tropical clam:20",
 	[32] = "turtle shell:6",
-	[33] = "urganite shell:6",
+	[33] = "uragnite shell:6",
 	[34] = "vongola clam:6",
 	[35] = "sack of white sand:7",
 };
