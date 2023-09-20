@@ -1,6 +1,13 @@
 # hxiclam
 This is an Ashita v4 addon that acts as a tracker for clamming in FFXI; specifically developed for HorizonXI server. This addon is modeled after hgather by SlowedHaste https://github.com/SlowedHaste/HGather.
 
+## Screenshots
+
+![Alt text](/Media/hxiclam_1.png?raw=true)
+
+![Alt text](/Media/hxiclam_2.png?raw=true)
+
+![Alt text](/Media/hxiclam_3.png?raw=true)
 
 ## Commands
 /hxiclam - Opens the configuration menu
