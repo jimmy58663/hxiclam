@@ -314,12 +314,19 @@ function format_output()
 
     local output_text = '';
     
-	output_text = '~~~~~~ HXIClam Bucket ~~~~~~';
+	output_text = '~~~~~~ HXIClam Bucket ~~~~~~~';
 	output_text = output_text .. '\nBucket Weight: ' .. hxiclam.settings.bucket_weight;
 	output_text = output_text .. '\nDig Timer: ' .. timer_display;
 	
+	if (hxiclam.settings.clamming.bucket_subtract[1]) then
+        bucket_total = bucket_total - hxiclam.settings.clamming.bucket_cost[1];
+		output_text = output_text .. '\nBucket Profit: ' .. format_int(bucket_total) .. 'g';
+    else
+        output_text = output_text .. '\nBucket Revenue: ' .. format_int(bucket_total) .. 'g';
+    end
+	
 	-- imgui.Separator();
-    output_text = output_text .. '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~';
+    output_text = output_text .. '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~';
 
     for k,v in pairs(hxiclam.settings.bucket) do
         itemTotal = 0;
@@ -332,14 +339,9 @@ function format_output()
     end
 	
 	-- imgui.Separator();
-    output_text = output_text .. '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~';
+    output_text = output_text .. '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n';
 	
-	if (hxiclam.settings.clamming.bucket_subtract[1]) then
-        bucket_total = bucket_total - hxiclam.settings.clamming.bucket_cost[1];
-		output_text = output_text .. '\nBucket Profit: ' .. format_int(bucket_total) .. 'g';
-    else
-        output_text = output_text .. '\nBucket Revenue: ' .. format_int(bucket_total) .. 'g';
-    end
+	
 	
     output_text = output_text .. '\n~~~~~~ HXIClam Session ~~~~~~';
     output_text = output_text .. '\nBuckets Cost: ' .. format_int(hxiclam.settings.bucket_count * hxiclam.settings.clamming.bucket_cost[1]);
@@ -349,7 +351,7 @@ function format_output()
     end
 
     -- imgui.Separator();
-    output_text = output_text .. '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~';
+    output_text = output_text .. '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~';
 
     for k,v in pairs(hxiclam.settings.rewards) do
         itemTotal = 0;
@@ -362,7 +364,7 @@ function format_output()
     end
 
     -- imgui.Separator();
-    output_text = output_text .. '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~';
+    output_text = output_text .. '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~';
 
 
     if (hxiclam.settings.clamming.bucket_subtract[1]) then
@@ -689,9 +691,10 @@ ashita.events.register('d3d_present', 'present_cb', function ()
     imgui.SetNextWindowBgAlpha(hxiclam.settings.opacity[1]);
     imgui.SetNextWindowSize({ -1, -1, }, ImGuiCond_Always);
     if (imgui.Begin('HXIClam##Display', hxiclam.settings.visible[1], bit.bor(ImGuiWindowFlags_NoDecoration, ImGuiWindowFlags_AlwaysAutoResize, ImGuiWindowFlags_NoFocusOnAppearing, ImGuiWindowFlags_NoNav))) then
-        imgui.SetWindowFontScale(hxiclam.settings.font_scale[1]);
-        output_text = format_output();
-        imgui.Text(output_text);
+	--if (imgui.Begin('HXIClam##Display', hxiclam.settings.visible[1], bit.bor(ImGuiWindowFlags_AlwaysAutoResize, ImGuiWindowFlags_NoFocusOnAppearing, ImGuiWindowFlags_NoNav))) then
+		imgui.SetWindowFontScale(hxiclam.settings.font_scale[1]);
+		output_text = format_output();
+		imgui.Text(output_text);
     end
     imgui.End();
 
