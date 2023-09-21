@@ -6,7 +6,7 @@
 
 addon.name      = 'hxiclam';
 addon.author    = 'jimmy58663';
-addon.version   = '1.1.0';
+addon.version   = '1.1.1';
 addon.desc      = 'HorizonXI clamming tracker addon.';
 addon.link      = 'https://github.com/jimmy58663/HXIClam';
 addon.commands  = {'/hxiclam'};
@@ -49,6 +49,7 @@ local default_settings = T{
     rewards = { },
 	bucket_count = 0,
 	item_count = 0,
+	session_view = 1, -- 0 no session stats, 1 session summary, 2 session details
 	
 	bucket = { },
 	bucket_weight = 0,
@@ -69,7 +70,7 @@ local default_settings = T{
 local hxiclam = T{
     settings = settings.load(default_settings),
 
-    -- HGather movement variables..
+    -- hxiclam movement variables..
     move = T{
         dragging = false,
         drag_x = 0,
@@ -96,7 +97,7 @@ local function render_editor()
         return;
     end
 
-    imgui.SetNextWindowSize({ 560, 600, });
+    imgui.SetNextWindowSize({ 580, 600, });
     imgui.SetNextWindowSizeConstraints({ 560, 600, }, { FLT_MAX, FLT_MAX, });
     if (imgui.Begin('HXIClam##Config', hxiclam.editor.is_open)) then
 
@@ -169,7 +170,7 @@ function render_general_config(settings)
         if( imgui.Checkbox('Visible', hxiclam.settings.visible) ) then
             -- if the checkbox is interacted with, reset the last_attempt
             -- to force the window back open
-            hgather.last_attempt = ashita.time.clock()['ms'];
+            hxiclam.last_attempt = ashita.time.clock()['ms'];
         end
         imgui.ShowHelp('Toggles if HXIClam is visible or not.');
         imgui.SliderFloat('Opacity', hxiclam.settings.opacity, 0.125, 1.0, '%.3f');
@@ -193,7 +194,21 @@ function render_general_config(settings)
     imgui.EndChild();
     imgui.Text('Clamming Display Settings');
     imgui.BeginChild('clam_general', { 0, 200, }, true);
-        imgui.Checkbox('Subtract Bucket Cost', hxiclam.settings.clamming.bucket_subtract);
+		if (imgui.RadioButton('Hide Session Stats', hxiclam.settings.session_view == 0)) then
+			hxiclam.settings.session_view = 0;
+		end
+		imgui.ShowHelp('Hides the session stats.');
+		imgui.SameLine();
+		if (imgui.RadioButton('Session Summary', hxiclam.settings.session_view == 1)) then
+			hxiclam.settings.session_view = 1;
+		end
+		imgui.ShowHelp('Shows only session stats as a summary.');
+		imgui.SameLine();
+		if (imgui.RadioButton('Session Details', hxiclam.settings.session_view == 2)) then
+			hxiclam.settings.session_view = 2;
+		end
+		imgui.ShowHelp('Shows full session details.');        
+		imgui.Checkbox('Subtract Bucket Cost', hxiclam.settings.clamming.bucket_subtract);
         imgui.ShowHelp('Toggles if bucket costs are automatically subtracted from gil earned.');
 		imgui.InputInt('Warning Weight Limit', hxiclam.settings.bucket_weight_warn_threshold);
         imgui.ShowHelp('How much weight left in your bucket will turn the bucket weight to the warning bucket color.');
@@ -376,7 +391,9 @@ local function print_help(isError)
 		{ '/hxiclam clear bucket', 'Clears the HXIClam bucket stats.' },
 		{ '/hxiclam clear session', 'Clears the HXIClam session stats.' },
         { '/hxiclam show', 'Shows the HXIClam information.' },
+		{ '/hxiclam show session', 'Shows the HXIClam session stats.' },
         { '/hxiclam hide', 'Hides the HXIClam information.' },
+		{ '/hxiclam hide session', 'Hides the HXIClam session stats.' },
 		{ '/hxiclam update', 'Updates the HXIClam item pricing and weight info.' },
 		{ '/hxiclam update pricing', 'Updates the HXIClam item pricing info.' },
 		{ '/hxiclam update weights', 'Updates the HXIClam item weight info.' },
@@ -439,8 +456,8 @@ ashita.events.register('command', 'command_cb', function (e)
     -- Block all related commands..
     e.blocked = true;
 
-    -- Handle: /hxiclam - Toggles the hgather editor.
-    -- Handle: /hxiclam edit - Toggles the hgather editor.
+    -- Handle: /hxiclam - Toggles the hxiclam editor.
+    -- Handle: /hxiclam edit - Toggles the hxiclam editor.
     if (#args == 1 or (#args >= 2 and args[2]:any('edit'))) then
         hxiclam.editor.is_open[1] = not hxiclam.editor.is_open[1];
         return;
@@ -489,15 +506,23 @@ ashita.events.register('command', 'command_cb', function (e)
 
     -- Handle: /hxiclam show - Shows the hxiclam object.
     if (#args >= 2 and args[2]:any('show')) then
-        -- reset last dig on show command to reset timeout counter
-        hxiclam.last_attempt = ashita.time.clock()['ms'];
-        hxiclam.settings.visible[1] = true;
+        if (#args == 3 and args[3]:any('session')) then
+			hxiclam.settings.session_visible[1] = true;
+		else
+		-- reset last dig on show command to reset timeout counter
+			hxiclam.last_attempt = ashita.time.clock()['ms'];
+			hxiclam.settings.visible[1] = true;
+		end
         return;
     end
 
     -- Handle: /hxiclam hide - Hides the hxiclam object.
     if (#args >= 2 and args[2]:any('hide')) then
-        hxiclam.settings.visible[1] = false;
+        if (#args == 3 and args[3]:any('session')) then
+			hxiclam.settings.session_visible[1] = false;
+		else
+			hxiclam.settings.visible[1] = false;
+		end
         return;
     end
 	
@@ -687,43 +712,49 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 		imgui.Separator();
 		
 		imgui.Text(bucket_contents);
-		imgui.Separator();
-		imgui.Separator();		
 		
-		imgui.SetWindowFontScale(hxiclam.settings.font_scale[1] + 0.1);
-		imgui.Text('Session Stats:');
-		imgui.SetWindowFontScale(hxiclam.settings.font_scale[1]);
-		imgui.Text('Buckets Cost: ' .. format_int(hxiclam.settings.bucket_count * hxiclam.settings.clamming.bucket_cost[1]));
-		imgui.Text('Items Dug: ' .. tostring(hxiclam.settings.item_count));
-		if (hxiclam.settings.moon_display[1]) then
-			imgui.Text('Moon: ' .. moon_phase .. ' (' .. tostring(moon_percent) .. '%%)');
-		end
-		imgui.Separator();
+		if (hxiclam.settings.session_view > 0) then
+			imgui.Separator();
+			imgui.Separator();		
+			imgui.SetWindowFontScale(hxiclam.settings.font_scale[1] + 0.1);
+			imgui.Text('Session Stats:');
+			imgui.SetWindowFontScale(hxiclam.settings.font_scale[1]);
+			imgui.Text('Buckets Cost: ' .. format_int(hxiclam.settings.bucket_count * hxiclam.settings.clamming.bucket_cost[1]));
+			imgui.Text('Items Dug: ' .. tostring(hxiclam.settings.item_count));
+			if (hxiclam.settings.moon_display[1]) then
+				imgui.Text('Moon: ' .. moon_phase .. ' (' .. tostring(moon_percent) .. '%%)');
+			end
+			imgui.Separator();
 
-		for k,v in pairs(hxiclam.settings.rewards) do
-			itemTotal = 0;
-			if (hxiclam.pricing[k] ~= nil) then
-				total_worth = total_worth + hxiclam.pricing[k] * v;
-				itemTotal = v * hxiclam.pricing[k];
+			for k,v in pairs(hxiclam.settings.rewards) do
+				itemTotal = 0;
+				if (hxiclam.pricing[k] ~= nil) then
+					total_worth = total_worth + hxiclam.pricing[k] * v;
+					itemTotal = v * hxiclam.pricing[k];
+				end
+					  
+				if (hxiclam.settings.session_view > 1) then
+					imgui.Text(k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)');
+				end
 			end
-				  
-			imgui.Text(k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)');
-		end
-		imgui.Separator();
+			if (hxiclam.settings.session_view > 1) then
+				imgui.Separator();
+			end
 
-		if (hxiclam.settings.clamming.bucket_subtract[1]) then
-			total_worth = total_worth - (hxiclam.settings.bucket_count * hxiclam.settings.clamming.bucket_cost[1]);
-			-- only update gil_per_hour every 3 seconds
-			if ((ashita.time.clock()['s'] % 3) == 0) then
-				hxiclam.gil_per_hour = math.floor((total_worth / elapsed_time) * 3600); 
+			if (hxiclam.settings.clamming.bucket_subtract[1]) then
+				total_worth = total_worth - (hxiclam.settings.bucket_count * hxiclam.settings.clamming.bucket_cost[1]);
+				-- only update gil_per_hour every 3 seconds
+				if ((ashita.time.clock()['s'] % 3) == 0) then
+					hxiclam.gil_per_hour = math.floor((total_worth / elapsed_time) * 3600); 
+				end
+				imgui.Text('Total Profit: ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hxiclam.gil_per_hour) .. ' gph)');
+			else
+				-- only update gil_per_hour every 3 seconds
+				if ((ashita.time.clock()['s'] % 3) == 0) then
+					hxiclam.gil_per_hour = math.floor((total_worth / elapsed_time) * 3600); 
+				end
+				imgui.Text('Total Revenue: ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hxiclam.gil_per_hour) .. ' gph)');
 			end
-			imgui.Text('Total Profit: ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hxiclam.gil_per_hour) .. ' gph)');
-		else
-			-- only update gil_per_hour every 3 seconds
-			if ((ashita.time.clock()['s'] % 3) == 0) then
-				hxiclam.gil_per_hour = math.floor((total_worth / elapsed_time) * 3600); 
-			end
-			imgui.Text('Total Revenue: ' .. format_int(total_worth) .. 'g' .. ' (' .. format_int(hxiclam.gil_per_hour) .. ' gph)');
 		end
     end
     imgui.End();

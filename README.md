@@ -12,9 +12,13 @@ This is an Ashita v4 addon that acts as a tracker for clamming in FFXI; specific
 ## Commands
 /hxiclam - Opens the configuration menu
 
-/hxiclam open - Opens the window showing clamming data
+/hxiclam show - Shows the hxiclam window
 
-/hxiclam close - Closes the window showing clamming data
+/hxiclam show session - Shows the session stats in the hxiclam window
+
+/hxiclam hide - Hides the hxiclam window
+
+/hxiclam hide session - Hides the session stats in the hxiclam window
 
 /hxiclam update - Updates the pricing and weight for items based on the item pricing and item weights in the editor
 
@@ -24,11 +28,11 @@ This is an Ashita v4 addon that acts as a tracker for clamming in FFXI; specific
 
 /hxiclam report - Prints the clamming data to chatlog
 
+/hxiclam clear - Clears the clamming bucket and session data
+
 /hxiclam clear bucket - Clears the clamming bucket data
 
 /hxiclam clear session - Clears the clamming session data
-
-/hxiclam clear - Clears the clamming bucket and session data
 
 ## Pricing
 Pricing for items is listed in the configuration window under the Item Price tab. Make sure the format is as follows:
