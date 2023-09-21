@@ -507,7 +507,7 @@ ashita.events.register('command', 'command_cb', function (e)
     -- Handle: /hxiclam show - Shows the hxiclam object.
     if (#args >= 2 and args[2]:any('show')) then
         if (#args == 3 and args[3]:any('session')) then
-			hxiclam.settings.session_visible[1] = true;
+			hxiclam.settings.session_view = 2;
 		else
 		-- reset last dig on show command to reset timeout counter
 			hxiclam.last_attempt = ashita.time.clock()['ms'];
@@ -519,7 +519,7 @@ ashita.events.register('command', 'command_cb', function (e)
     -- Handle: /hxiclam hide - Hides the hxiclam object.
     if (#args >= 2 and args[2]:any('hide')) then
         if (#args == 3 and args[3]:any('session')) then
-			hxiclam.settings.session_visible[1] = false;
+			hxiclam.settings.session_view = 0;
 		else
 			hxiclam.settings.visible[1] = false;
 		end
