@@ -6,7 +6,7 @@
 
 addon.name      = 'hxiclam';
 addon.author    = 'jimmy58663';
-addon.version   = '1.1.1';
+addon.version   = '1.1.2';
 addon.desc      = 'HorizonXI clamming tracker addon.';
 addon.link      = 'https://github.com/jimmy58663/HXIClam';
 addon.commands  = {'/hxiclam'};
@@ -601,9 +601,9 @@ ashita.events.register('text_in', 'text_in_cb', function (e)
 	elseif (bucket_turnin) then
 		if (hxiclam.settings.bucket ~= nil and hxiclam.settings.bucket ~= { }) then
 			for k,v in pairs(hxiclam.settings.bucket) do
-				hxiclam.settings.item_count = hxiclam.settings.item_count + 1;
+				hxiclam.settings.item_count = hxiclam.settings.item_count + v;
 				if (hxiclam.settings.rewards[k] == nil) then
-					hxiclam.settings.rewards[k] = 1;
+					hxiclam.settings.rewards[k] = v;
 				elseif (hxiclam.settings.rewards[k] ~= nil) then
 					hxiclam.settings.rewards[k] = hxiclam.settings.rewards[k] + v
 				end
