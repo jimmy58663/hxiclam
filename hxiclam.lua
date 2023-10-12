@@ -218,7 +218,7 @@ function render_general_config(settings)
         imgui.ShowHelp('How much weight left in your bucket will turn the bucket weight to the critical bucket color.');
 		imgui.ColorEdit4('Critical Bucket Color', hxiclam.settings.bucket_weight_crit_color);
 		imgui.ShowHelp('The color bucket weight will turn when it reached the critical weight limit.');
-		imgui.ColorEdit4('Dig Timer Read Color', hxiclam.settings.dig_timer_ready_color);
+		imgui.ColorEdit4('Dig Timer Ready Color', hxiclam.settings.dig_timer_ready_color);
 		imgui.ShowHelp('The color dig timer will turn when it reaches Dig Ready.');
 		imgui.SliderFloat('Weight Font Scale', hxiclam.settings.bucket_weight_font_scale, 0.1, 2.0, '%.3f');
         imgui.ShowHelp('The scaling of the font size for bucket weight.');
