@@ -6,7 +6,7 @@
 
 addon.name      = 'hxiclam';
 addon.author    = 'jimmy58663';
-addon.version   = '1.1.2';
+addon.version   = '1.2.0';
 addon.desc      = 'HorizonXI clamming tracker addon.';
 addon.link      = 'https://github.com/jimmy58663/HXIClam';
 addon.commands  = {'/hxiclam'};
@@ -25,6 +25,12 @@ local data      = require('constants');
 local C = ffi.C;
 local d3d8dev = d3d.get_device();
 
+local logs = T{
+	drop_log_dir = 'drops',
+	turnin_log_dir = 'turnins',
+	char_name = nil,
+};
+
 -- Default Settings
 local default_settings = T{
     visible = T{ true, },
@@ -38,8 +44,9 @@ local default_settings = T{
     font_scale = T{ 1.0 },
     x = T{ 100, },
     y = T{ 100, },
+	enable_logging = T{ true },
 
-    -- Choco Digging Display Settings
+    -- Clamming Display Settings
     clamming = T{ 
         bucket_cost = T{ 500 },
         bucket_subtract = T{ true, },
@@ -191,6 +198,8 @@ function render_general_config(settings)
         imgui.ShowHelp('Toggles if moon phase / percent is shown.');
         imgui.Checkbox('Reset Rewards On Load', hxiclam.settings.reset_on_load);
         imgui.ShowHelp('Toggles whether we reset rewards each time the addon is loaded.');
+		imgui.Checkbox('Enable Logging', hxiclam.settings.enable_logging);
+        imgui.ShowHelp('Toggles whether drops and bucket turnins are logged in a text file.');
     imgui.EndChild();
     imgui.Text('Clamming Display Settings');
     imgui.BeginChild('clam_general', { 0, 200, }, true);
@@ -368,6 +377,34 @@ function GetMoon()
     return moon_table;
 end
 
+----------------------------------------------------------------------------------------------------
+-- Helper functions
+----------------------------------------------------------------------------------------------------
+function WriteLog(logtype, item)
+	-- Current log types supported are drop and turnin
+	local logdir = nil
+	if logtype == 'drop' then
+		logdir = logs.drop_log_dir;
+	elseif logtype == 'turnin' then
+		logdir = logs.turnin_log_dir;
+	end
+	
+	local datetime = os.date('*t');
+	local log_file_name = ('%s_%.4u.%.2u.%.2u.log'):fmt(logs.char_name, datetime.year, datetime.month, datetime.day);
+	local full_directory = ('%s/addons/hxiclam/logs/%s/'):fmt(AshitaCore:GetInstallPath(), logdir);
+	
+	if (not ashita.fs.exists(full_directory)) then
+		ashita.fs.create_dir(full_directory);
+	end
+	
+	local file = io.open(('%s/%s'):fmt(full_directory, log_file_name), 'a');
+	if (file ~= nil) then
+		local filedata = ('%s, %s\n'):fmt(os.date('[%H:%M:%S]'), item);
+		file:write(filedata);
+		file:close();
+	end
+end
+
 --[[
 * Prints the addon help information.
 *
@@ -431,6 +468,11 @@ ashita.events.register('load', 'load_cb', function ()
         clear_rewards();
 		clear_bucket();
     end
+	
+	local name = AshitaCore:GetMemoryManager():GetParty():GetMemberName(0);
+    if (name ~= nil and name:len() > 0) then
+        logs.char_name = name;
+    end 
 end);
 
 --[[
@@ -592,6 +634,11 @@ ashita.events.register('text_in', 'text_in_cb', function (e)
 			hxiclam.settings.bucket[item] = hxiclam.settings.bucket[item] + 1;
 		end
 		
+		-- Log the item
+		if (hxiclam.settings.enable_logging[1]) then
+			WriteLog('drop', item);
+		end
+		
 		-- Update bucket weight
 		if (hxiclam.weights[item] ~= nil) then
 			hxiclam.settings.bucket_weight = hxiclam.settings.bucket_weight + hxiclam.weights[item];
@@ -606,6 +653,13 @@ ashita.events.register('text_in', 'text_in_cb', function (e)
 					hxiclam.settings.rewards[k] = v;
 				elseif (hxiclam.settings.rewards[k] ~= nil) then
 					hxiclam.settings.rewards[k] = hxiclam.settings.rewards[k] + v
+				end
+				
+				-- Log the items turned in
+				if (hxiclam.settings.enable_logging[1]) then
+					for i = 1, v do
+						WriteLog('turnin', k);
+					end
 				end
 			end
 			clear_bucket();
