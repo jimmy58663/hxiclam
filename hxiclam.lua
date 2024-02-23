@@ -6,7 +6,7 @@
 
 addon.name      = 'hxiclam';
 addon.author    = 'jimmy58663';
-addon.version   = '1.2.0';
+addon.version   = '1.2.1';
 addon.desc      = 'HorizonXI clamming tracker addon.';
 addon.link      = 'https://github.com/jimmy58663/HXIClam';
 addon.commands  = {'/hxiclam'};
@@ -726,11 +726,11 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 		imgui.Text('Bucket Weight: ');
 		imgui.SameLine();
 		if ((hxiclam.settings.bucket_capacity - hxiclam.settings.bucket_weight) <= hxiclam.settings.bucket_weight_crit_threshold[1]) then
-			imgui.TextColored(hxiclam.settings.bucket_weight_crit_color, tostring(hxiclam.settings.bucket_weight));
+			imgui.TextColored(hxiclam.settings.bucket_weight_crit_color, tostring(hxiclam.settings.bucket_weight) .. '/' .. hxiclam.settings.bucket_capacity);
 		elseif ((hxiclam.settings.bucket_capacity - hxiclam.settings.bucket_weight) <= hxiclam.settings.bucket_weight_warn_threshold[1]) then
-			imgui.TextColored(hxiclam.settings.bucket_weight_warn_color, tostring(hxiclam.settings.bucket_weight));
+			imgui.TextColored(hxiclam.settings.bucket_weight_warn_color, tostring(hxiclam.settings.bucket_weight) .. '/' .. hxiclam.settings.bucket_capacity);
 		else
-			imgui.Text(tostring(hxiclam.settings.bucket_weight));
+			imgui.Text(tostring(hxiclam.settings.bucket_weight) .. '/' .. hxiclam.settings.bucket_capacity);
 		end
 		imgui.SetWindowFontScale(hxiclam.settings.font_scale[1]);
 		
