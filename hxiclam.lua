@@ -71,6 +71,7 @@ local default_settings = T{
 	
 	last_dig = 0,
 	dig_timer = 0,
+	dig_timer_countdown = true,
 };
 
 -- HXIClam Variables
@@ -216,7 +217,16 @@ function render_general_config(settings)
 		if (imgui.RadioButton('Session Details', hxiclam.settings.session_view == 2)) then
 			hxiclam.settings.session_view = 2;
 		end
-		imgui.ShowHelp('Shows full session details.');        
+		imgui.ShowHelp('Shows full session details.');
+		if (imgui.RadioButton('Dig Timer Count Up', hxiclam.settings.dig_timer_countdown == false)) then
+			hxiclam.settings.dig_timer_countdown = false;
+		end
+		imgui.ShowHelp('Dig timer will count up to 9 and then display Dig Ready.');
+		imgui.SameLine();
+		if (imgui.RadioButton('Dig Timer Count Down', hxiclam.settings.dig_timer_countdown == true)) then
+			hxiclam.settings.dig_timer_countdown = true;
+		end
+		imgui.ShowHelp('Dig timer will count down from 10 and then display Dig Ready.');		
 		imgui.Checkbox('Subtract Bucket Cost', hxiclam.settings.clamming.bucket_subtract);
         imgui.ShowHelp('Toggles if bucket costs are automatically subtracted from gil earned.');
 		imgui.InputInt('Warning Weight Limit', hxiclam.settings.bucket_weight_warn_threshold);
@@ -625,7 +635,14 @@ ashita.events.register('text_in', 'text_in_cb', function (e)
 	elseif (item) then
 		--Update last dig time and reset dig_timer
 		hxiclam.settings.last_dig = ashita.time.clock()['ms'];
-		hxiclam.settings.dig_timer = 0;
+		
+		if (hxiclam.settings.dig_timer_countdown) then
+			hxiclam.settings.dig_timer = 10;
+			print('Countdown timer set to 10');
+		else
+			hxiclam.settings.dig_timer = 0;
+			print('Countdown timer set to 0');
+		end
 		
 		-- Update bucket item list
 		if (hxiclam.settings.bucket[item] == nil) then
@@ -704,14 +721,28 @@ ashita.events.register('d3d_present', 'present_cb', function ()
     imgui.SetNextWindowSize({ -1, -1, }, ImGuiCond_Always);
     if (imgui.Begin('HXIClam##Display', hxiclam.settings.visible[1], bit.bor(ImGuiWindowFlags_NoDecoration, ImGuiWindowFlags_AlwaysAutoResize, ImGuiWindowFlags_NoFocusOnAppearing, ImGuiWindowFlags_NoNav))) then
 		local elapsed_time = ashita.time.clock()['s'] - math.floor(hxiclam.settings.first_attempt / 1000.0);
-		local dig_diff = ashita.time.clock()['s'] - math.floor(hxiclam.settings.last_dig / 1000.0);
-		if (dig_diff > hxiclam.settings.dig_timer) then
-			hxiclam.settings.dig_timer = dig_diff
-		end
+		local timer_display = hxiclam.settings.dig_timer;
 		
-		local timer_display = hxiclam.settings.dig_timer
-		if (timer_display >= 10) then
-			timer_display = "Dig Ready"
+		if (hxiclam.settings.dig_timer_countdown) then
+			local dig_diff = (math.floor(hxiclam.settings.last_dig / 1000.0) + 10) - ashita.time.clock()['s'];
+			if (dig_diff < hxiclam.settings.dig_timer) then
+				hxiclam.settings.dig_timer = dig_diff;
+			end
+			
+			timer_display = hxiclam.settings.dig_timer;
+			if (timer_display <= 0) then
+				timer_display = "Dig Ready"
+			end
+		else
+			local dig_diff = ashita.time.clock()['s'] - math.floor(hxiclam.settings.last_dig / 1000.0);
+			if (dig_diff > hxiclam.settings.dig_timer) then
+				hxiclam.settings.dig_timer = dig_diff
+			end
+			
+			timer_display = hxiclam.settings.dig_timer;
+			if (timer_display >= 10) then
+				timer_display = "Dig Ready"
+			end
 		end
 
 		local total_worth = 0;
