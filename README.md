@@ -1,5 +1,5 @@
 # hxiclam
-This is an Ashita v4 addon that acts as a tracker for clamming in FFXI; specifically developed for HorizonXI server. This addon is modeled after hgather by SlowedHaste https://github.com/SlowedHaste/HGather.
+This is an Ashita v4 addon that acts as a tracker for clamming in FFXI; specifically developed for HorizonXI server. This addon is modeled after [HGather](https://github.com/SlowedHaste/HGather) by SlowedHaste.
 
 ## Screenshots
 
