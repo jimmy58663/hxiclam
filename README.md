@@ -56,9 +56,6 @@ This would set the weight for pebbles at 7 pz. Make sure there are no spaces or 
 
 If you update the weights while in game, make sure to use the **/hxiclam update** or **/hxiclam update weights** command to update the weights.
 
-## Contact Info
-If you would like to contact me for anything you can leave an issue on this repo or utilize the below methods:
-
-HorizonXI: Cybin
-
-HorizonXI Discord: Cybin  https://discord.gg/horizonxi
+## Questions
+If you are having issues or have any questions you can try the [Wiki](https://github.com/jimmy58663/hxiclam/wiki "HXIClam WIki").
+My contact info is listed in the Wiki also for anything that you still need help with.
