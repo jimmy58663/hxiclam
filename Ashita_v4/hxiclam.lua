@@ -6,7 +6,7 @@
 
 addon.name      = 'hxiclam';
 addon.author    = 'jimmy58663';
-addon.version   = '1.2.1';
+addon.version   = '1.2.2';
 addon.desc      = 'HorizonXI clamming tracker addon.';
 addon.link      = 'https://github.com/jimmy58663/HXIClam';
 addon.commands  = {'/hxiclam'};
@@ -39,8 +39,8 @@ local default_settings = T{
     opacity = T{ 1.0, },
     padding = T{ 1.0, },
     scale = T{ 1.0, },
-    item_index = ItemIndex,
-	item_weight_index = ItemWeightIndex,
+    item_index = data.ItemIndex,
+	item_weight_index = data.ItemWeightIndex,
     font_scale = T{ 1.0 },
     x = T{ 100, },
     y = T{ 100, },
@@ -277,6 +277,9 @@ function render_item_weight_config(settings)
     imgui.EndChild();
 end
 
+----------------------------------------------------------------------------------------------------
+-- Helper functions
+----------------------------------------------------------------------------------------------------
 function split(inputstr, sep)
     if sep == nil then
         sep = '%s';
@@ -286,36 +289,6 @@ function split(inputstr, sep)
         table.insert(t, str);
     end
     return t;
-end
-
-function update_pricing() 
-    for k, v in pairs(hxiclam.settings.item_index) do
-        for k2, v2 in pairs(split(v, ':')) do
-            if (k2 == 1) then
-                itemname = v2;
-            end
-            if (k2 == 2) then
-                itemvalue = v2;
-            end
-        end
-
-        hxiclam.pricing[itemname] = itemvalue;
-    end
-end
-
-function update_weights() 
-    for k, v in pairs(hxiclam.settings.item_weight_index) do
-        for k2, v2 in pairs(split(v, ':')) do
-            if (k2 == 1) then
-                itemname = v2;
-            end
-            if (k2 == 2) then
-                itemvalue = v2;
-            end
-        end
-
-        hxiclam.weights[itemname] = itemvalue;
-    end
 end
 
 ----------------------------------------------------------------------------------------------------
@@ -345,19 +318,31 @@ function format_int(number)
     end
 end
 
-function clear_rewards()
-    hxiclam.last_attempt = ashita.time.clock()['ms'];
-    hxiclam.settings.first_attempt = 0;
-    hxiclam.settings.rewards = { };
-    hxiclam.settings.item_count = 0;
-	hxiclam.settings.bucket_count = 0;
+function WriteLog(logtype, item)
+	-- Current log types supported are drop and turnin
+	local logdir = nil
+	if logtype == 'drop' then
+		logdir = logs.drop_log_dir;
+	elseif logtype == 'turnin' then
+		logdir = logs.turnin_log_dir;
+	end
+
+	local datetime = os.date('*t');
+	local log_file_name = ('%s_%.4u.%.2u.%.2u.log'):fmt(logs.char_name, datetime.year, datetime.month, datetime.day);
+	local full_directory = ('%s/addons/hxiclam/logs/%s/'):fmt(AshitaCore:GetInstallPath(), logdir);
+
+	if (not ashita.fs.exists(full_directory)) then
+		ashita.fs.create_dir(full_directory);
+	end
+
+	local file = io.open(('%s/%s'):fmt(full_directory, log_file_name), 'a');
+	if (file ~= nil) then
+		local filedata = ('%s, %s\n'):fmt(os.date('[%H:%M:%S]'), item);
+		file:write(filedata);
+		file:close();
+	end
 end
 
-function clear_bucket()
-	hxiclam.settings.bucket = { };
-	hxiclam.settings.bucket_weight = 0;
-	hxiclam.settings.bucket_capacity = 50;
-end
 ----------------------------------------------------------------------------------------------------
 -- Helper functions borrowed from luashitacast
 ----------------------------------------------------------------------------------------------------
@@ -382,39 +367,14 @@ function GetMoon()
     local timestamp = GetTimestamp();
     local moon_index = ((timestamp.day + 26) % 84) + 1;
     local moon_table = {};
-    moon_table.MoonPhase = MoonPhase[moon_index];
-    moon_table.MoonPhasePercent = MoonPhasePercent[moon_index];
+    moon_table.MoonPhase = data.MoonPhase[moon_index];
+    moon_table.MoonPhasePercent = data.MoonPhasePercent[moon_index];
     return moon_table;
 end
 
 ----------------------------------------------------------------------------------------------------
--- Helper functions
+-- Core functions
 ----------------------------------------------------------------------------------------------------
-function WriteLog(logtype, item)
-	-- Current log types supported are drop and turnin
-	local logdir = nil
-	if logtype == 'drop' then
-		logdir = logs.drop_log_dir;
-	elseif logtype == 'turnin' then
-		logdir = logs.turnin_log_dir;
-	end
-	
-	local datetime = os.date('*t');
-	local log_file_name = ('%s_%.4u.%.2u.%.2u.log'):fmt(logs.char_name, datetime.year, datetime.month, datetime.day);
-	local full_directory = ('%s/addons/hxiclam/logs/%s/'):fmt(AshitaCore:GetInstallPath(), logdir);
-	
-	if (not ashita.fs.exists(full_directory)) then
-		ashita.fs.create_dir(full_directory);
-	end
-	
-	local file = io.open(('%s/%s'):fmt(full_directory, log_file_name), 'a');
-	if (file ~= nil) then
-		local filedata = ('%s, %s\n'):fmt(os.date('[%H:%M:%S]'), item);
-		file:write(filedata);
-		file:close();
-	end
-end
-
 --[[
 * Prints the addon help information.
 *
@@ -433,7 +393,6 @@ local function print_help(isError)
         { '/hxiclam edit', 'Toggles the HXIClam editor.' },
         { '/hxiclam save', 'Saves the current settings to disk.' },
         { '/hxiclam reload', 'Reloads the current settings from disk.' },
-        { '/hxiclam report', 'Reports the current session to chat window.' },
         { '/hxiclam clear', 'Clears the HXIClam bucket and session stats.' },
 		{ '/hxiclam clear bucket', 'Clears the HXIClam bucket stats.' },
 		{ '/hxiclam clear session', 'Clears the HXIClam session stats.' },
@@ -450,6 +409,50 @@ local function print_help(isError)
     cmds:ieach(function (v)
         print(chat.header(addon.name):append(chat.error('Usage: ')):append(chat.message(v[1]):append(' - ')):append(chat.color1(6, v[2])));
     end);
+end
+
+function update_pricing()
+    for k, v in pairs(hxiclam.settings.item_index) do
+        for k2, v2 in pairs(split(v, ':')) do
+            if (k2 == 1) then
+                itemname = v2;
+            end
+            if (k2 == 2) then
+                itemvalue = v2;
+            end
+        end
+
+        hxiclam.pricing[itemname] = itemvalue;
+    end
+end
+
+function update_weights()
+    for k, v in pairs(hxiclam.settings.item_weight_index) do
+        for k2, v2 in pairs(split(v, ':')) do
+            if (k2 == 1) then
+                itemname = v2;
+            end
+            if (k2 == 2) then
+                itemvalue = v2;
+            end
+        end
+
+        hxiclam.weights[itemname] = itemvalue;
+    end
+end
+
+function clear_rewards()
+    hxiclam.last_attempt = ashita.time.clock()['ms'];
+    hxiclam.settings.first_attempt = 0;
+    hxiclam.settings.rewards = { };
+    hxiclam.settings.item_count = 0;
+	hxiclam.settings.bucket_count = 0;
+end
+
+function clear_bucket()
+	hxiclam.settings.bucket = { };
+	hxiclam.settings.bucket_weight = 0;
+	hxiclam.settings.bucket_capacity = 50;
 end
 
 --[[
@@ -531,13 +534,6 @@ ashita.events.register('command', 'command_cb', function (e)
         return;
     end
 
-    -- Handle: /hxiclam report - Reports the current session to the chat window.
-    if (#args >= 2 and args[2]:any('report')) then
-        output_text = format_output();
-        print(output_text);
-        return;
-    end
-
     -- Handle: /hxiclam clear - Clears the current session and bucket info.
 	-- Handle: /hxiclam clear bucket - Clears the current bucket info.
 	-- Handle: /hxiclam clear session - Clears the current session info.
@@ -560,6 +556,8 @@ ashita.events.register('command', 'command_cb', function (e)
     if (#args >= 2 and args[2]:any('show')) then
         if (#args == 3 and args[3]:any('session')) then
 			hxiclam.settings.session_view = 2;
+        elseif (#args == 3 and args[3]:any('summary')) then
+            hxiclam.settings.session_view = 1;
 		else
 		-- reset last dig on show command to reset timeout counter
 			hxiclam.last_attempt = ashita.time.clock()['ms'];
@@ -638,10 +636,8 @@ ashita.events.register('text_in', 'text_in_cb', function (e)
 		
 		if (hxiclam.settings.dig_timer_countdown) then
 			hxiclam.settings.dig_timer = 10;
-			print('Countdown timer set to 10');
 		else
 			hxiclam.settings.dig_timer = 0;
-			print('Countdown timer set to 0');
 		end
 		
 		-- Update bucket item list
@@ -775,7 +771,7 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 		
 		local bucket_contents = '';
 		for k,v in pairs(hxiclam.settings.bucket) do
-			itemTotal = 0;
+			local itemTotal = 0;
 			if (hxiclam.pricing[k] ~= nil) then
 				bucket_total = bucket_total + hxiclam.pricing[k] * v;
 				itemTotal = v * hxiclam.pricing[k];
@@ -812,7 +808,7 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 			imgui.Separator();
 
 			for k,v in pairs(hxiclam.settings.rewards) do
-				itemTotal = 0;
+				local itemTotal = 0;
 				if (hxiclam.pricing[k] ~= nil) then
 					total_worth = total_worth + hxiclam.pricing[k] * v;
 					itemTotal = v * hxiclam.pricing[k];

@@ -1,5 +1,5 @@
 # hxiclam
-This is an Ashita v4 addon that acts as a tracker for clamming in FFXI; specifically developed for HorizonXI server. This addon is modeled after [HGather](https://github.com/SlowedHaste/HGather) by SlowedHaste.
+This is an addon that acts as a tracker for clamming in FFXI; specifically developed for HorizonXI server. This addon is modeled after [HGather](https://github.com/SlowedHaste/HGather) by SlowedHaste.
 
 ## Screenshots
 
@@ -16,6 +16,8 @@ This is an Ashita v4 addon that acts as a tracker for clamming in FFXI; specific
 
 /hxiclam show session - Shows the session stats in the hxiclam window
 
+/hxiclam show summary - Shows the HXIClam session summary
+
 /hxiclam hide - Hides the hxiclam window
 
 /hxiclam hide session - Hides the session stats in the hxiclam window
@@ -25,8 +27,6 @@ This is an Ashita v4 addon that acts as a tracker for clamming in FFXI; specific
 /hxiclam update pricing - Updates the pricing for items based on the item pricing in the editor
 
 /hxiclam update weights - Updates the weight for items based on the item weights in the editor
-
-/hxiclam report - Prints the clamming data to chatlog
 
 /hxiclam clear - Clears the clamming bucket and session data
 
