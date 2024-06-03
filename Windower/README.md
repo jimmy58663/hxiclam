@@ -1,5 +1,13 @@
 # hxiclam
-This is an addon that acts as a tracker for clamming in FFXI; specifically developed for HorizonXI server.
+This is a Windower addon that acts as a tracker for clamming in FFXI; specifically developed for HorizonXI server.
+
+## Screenshots
+
+![Alt text](../Media/hxiclam_windower_1.png?raw=true)
+
+![Alt text](../Media/hxiclam_windower_2.png?raw=true)
+
+![Alt text](../Media/hxiclam_windower_3.png?raw=true)
 
 ## Commands
 //hxiclam show - Shows the hxiclam window
