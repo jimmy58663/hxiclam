@@ -20,7 +20,7 @@ local imgui     = require('imgui');
 local prims     = require('primitives');
 local scaling   = require('scaling');
 local settings  = require('settings');
-local data      = require('Shared.constants');
+local data      = require('constants');
 
 local C = ffi.C;
 local d3d8dev = d3d.get_device();

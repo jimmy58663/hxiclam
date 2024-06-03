@@ -37,7 +37,7 @@ require('tables');
 require('strings');
 local logger = require('logger');
 local config = require('config');
-local data = require('Shared.constants');
+local data = require('constants');
 local texts = require('texts');
 
 local logs = T{
