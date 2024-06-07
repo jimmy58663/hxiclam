@@ -26,7 +26,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --]] _addon.name = 'hxiclam';
 _addon.author = 'jimmy58663';
-_addon.version = '1.2.2';
+_addon.version = '1.2.3';
 -- _addon.desc      = 'HorizonXI clamming tracker addon.';
 -- _addon.link      = 'https://github.com/jimmy58663/HXIClam';
 _addon.commands = {'hxiclam'};
