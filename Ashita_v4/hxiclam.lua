@@ -87,86 +87,7 @@ local hxiclam = T {
 --[[
 * Renders the HXIClam settings editor.
 --]]
-local function render_editor()
-    if (not hxiclam.editor.is_open[1]) then return; end
-
-    imgui.SetNextWindowSize({580, 600});
-    imgui.SetNextWindowSizeConstraints({560, 600}, {FLT_MAX, FLT_MAX});
-    if (imgui.Begin('HXIClam##Config', hxiclam.editor.is_open)) then
-
-        -- imgui.SameLine();
-        if (imgui.Button('Save Settings')) then
-            settings.save();
-            print(
-                chat.header(addon.name):append(chat.message('Settings saved.')));
-        end
-        imgui.SameLine();
-        if (imgui.Button('Reload Settings')) then
-            settings.reload();
-            print(chat.header(addon.name):append(chat.message(
-                                                     'Settings reloaded.')));
-        end
-        imgui.SameLine();
-        if (imgui.Button('Reset Settings')) then
-            settings.reset();
-            print(chat.header(addon.name):append(chat.message(
-                                                     'Settings reset to defaults.')));
-        end
-        imgui.SameLine();
-        if (imgui.Button('Update Pricing')) then
-            update_pricing();
-            print(chat.header(addon.name):append(
-                      chat.message('Pricing updated.')));
-        end
-        if (imgui.Button('Clear Session')) then
-            clear_rewards();
-            print(chat.header(addon.name):append(
-                      chat.message('Cleared session.')));
-        end
-        imgui.SameLine();
-        if (imgui.Button('Clear Bucket')) then
-            clear_bucket();
-            print(
-                chat.header(addon.name):append(chat.message('Cleared bucket.')));
-        end
-        imgui.SameLine();
-        if (imgui.Button('Clear All')) then
-            clear_rewards();
-            clear_bucket();
-            print(chat.header(addon.name):append(chat.message(
-                                                     'Cleared session and bucket.')));
-        end
-        imgui.SameLine();
-        if (imgui.Button('Update Weights')) then
-            update_weights();
-            print(chat.header(addon.name):append(
-                      chat.message('Weights updated.')));
-        end
-
-        imgui.Separator();
-
-        if (imgui.BeginTabBar('##hxiclam_tabbar',
-                              ImGuiTabBarFlags_NoCloseWithMiddleMouseButton)) then
-            if (imgui.BeginTabItem('General', nil)) then
-                render_general_config(settings);
-                imgui.EndTabItem();
-            end
-            if (imgui.BeginTabItem('Item Price', nil)) then
-                render_item_price_config(settings);
-                imgui.EndTabItem();
-            end
-            if (imgui.BeginTabItem('Item Weight', nil)) then
-                render_item_weight_config(settings);
-                imgui.EndTabItem();
-            end
-            imgui.EndTabBar();
-        end
-
-    end
-    imgui.End();
-end
-
-function render_general_config(settings)
+local function render_general_config(settings)
     imgui.Text('General Settings');
     imgui.BeginChild('settings_general', {0, 200}, true);
     if (imgui.Checkbox('Visible', hxiclam.settings.visible)) then
@@ -259,7 +180,7 @@ function render_general_config(settings)
     imgui.EndChild();
 end
 
-function render_item_price_config(settings)
+local function render_item_price_config(settings)
     imgui.Text('Item Prices');
     imgui.BeginChild('settings_general', {0, 470}, true);
 
@@ -279,7 +200,7 @@ function render_item_price_config(settings)
     imgui.EndChild();
 end
 
-function render_item_weight_config(settings)
+local function render_item_weight_config(settings)
     imgui.Text('Item Weights');
     imgui.BeginChild('settings_general', {0, 470}, true);
 
@@ -294,10 +215,89 @@ function render_item_weight_config(settings)
     imgui.EndChild();
 end
 
+local function render_editor()
+    if (not hxiclam.editor.is_open[1]) then return; end
+
+    imgui.SetNextWindowSize({580, 600});
+    imgui.SetNextWindowSizeConstraints({560, 600}, {FLT_MAX, FLT_MAX});
+    if (imgui.Begin('HXIClam##Config', hxiclam.editor.is_open)) then
+
+        -- imgui.SameLine();
+        if (imgui.Button('Save Settings')) then
+            settings.save();
+            print(
+                chat.header(addon.name):append(chat.message('Settings saved.')));
+        end
+        imgui.SameLine();
+        if (imgui.Button('Reload Settings')) then
+            settings.reload();
+            print(chat.header(addon.name):append(chat.message(
+                                                     'Settings reloaded.')));
+        end
+        imgui.SameLine();
+        if (imgui.Button('Reset Settings')) then
+            settings.reset();
+            print(chat.header(addon.name):append(chat.message(
+                                                     'Settings reset to defaults.')));
+        end
+        imgui.SameLine();
+        if (imgui.Button('Update Pricing')) then
+            update_pricing();
+            print(chat.header(addon.name):append(
+                      chat.message('Pricing updated.')));
+        end
+        if (imgui.Button('Clear Session')) then
+            clear_rewards();
+            print(chat.header(addon.name):append(
+                      chat.message('Cleared session.')));
+        end
+        imgui.SameLine();
+        if (imgui.Button('Clear Bucket')) then
+            clear_bucket();
+            print(
+                chat.header(addon.name):append(chat.message('Cleared bucket.')));
+        end
+        imgui.SameLine();
+        if (imgui.Button('Clear All')) then
+            clear_rewards();
+            clear_bucket();
+            print(chat.header(addon.name):append(chat.message(
+                                                     'Cleared session and bucket.')));
+        end
+        imgui.SameLine();
+        if (imgui.Button('Update Weights')) then
+            update_weights();
+            print(chat.header(addon.name):append(
+                      chat.message('Weights updated.')));
+        end
+
+        imgui.Separator();
+
+        if (imgui.BeginTabBar('##hxiclam_tabbar',
+                              ImGuiTabBarFlags_NoCloseWithMiddleMouseButton)) then
+            if (imgui.BeginTabItem('General', nil)) then
+                render_general_config(settings);
+                imgui.EndTabItem();
+            end
+            if (imgui.BeginTabItem('Item Price', nil)) then
+                render_item_price_config(settings);
+                imgui.EndTabItem();
+            end
+            if (imgui.BeginTabItem('Item Weight', nil)) then
+                render_item_weight_config(settings);
+                imgui.EndTabItem();
+            end
+            imgui.EndTabBar();
+        end
+
+    end
+    imgui.End();
+end
+
 ----------------------------------------------------------------------------------------------------
 -- Helper functions
 ----------------------------------------------------------------------------------------------------
-function split(inputstr, sep)
+local function split(inputstr, sep)
     if sep == nil then sep = '%s'; end
     local t = {};
     for str in string.gmatch(inputstr, '([^' .. sep .. ']+)') do
@@ -310,7 +310,7 @@ end
 -- Format numbers with commas
 -- https://stackoverflow.com/questions/10989788/format-integer-in-lua
 ----------------------------------------------------------------------------------------------------
-function format_int(number)
+local function format_int(number)
     if (string.len(number) < 4) then return number end
     if (number ~= nil and number ~= '' and type(number) == 'number') then
         local i, j, minus, int, fraction =
@@ -434,7 +434,9 @@ local function print_help(isError)
     end);
 end
 
-function update_pricing()
+local function update_pricing()
+    local itemname;
+    local itemvalue;
     for k, v in pairs(hxiclam.settings.item_index) do
         for k2, v2 in pairs(split(v, ':')) do
             if (k2 == 1) then itemname = v2; end
@@ -445,7 +447,9 @@ function update_pricing()
     end
 end
 
-function update_weights()
+local function update_weights()
+    local itemname;
+    local itemvalue;
     for k, v in pairs(hxiclam.settings.item_weight_index) do
         for k2, v2 in pairs(split(v, ':')) do
             if (k2 == 1) then itemname = v2; end
@@ -456,7 +460,7 @@ function update_weights()
     end
 end
 
-function clear_rewards()
+local function clear_rewards()
     hxiclam.last_attempt = ashita.time.clock()['ms'];
     hxiclam.settings.first_attempt = 0;
     hxiclam.settings.rewards = {};
@@ -464,7 +468,7 @@ function clear_rewards()
     hxiclam.settings.bucket_count = 0;
 end
 
-function clear_bucket()
+local function clear_bucket()
     hxiclam.settings.bucket = {};
     hxiclam.settings.bucket_weight = 0;
     hxiclam.settings.bucket_capacity = 50;
