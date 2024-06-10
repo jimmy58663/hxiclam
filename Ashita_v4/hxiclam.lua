@@ -98,7 +98,6 @@ local MAX_HEIGHT_IN_LINES = 26;
 --]]
 local function render_general_config(settings)
     imgui.Text('General Settings');
-    -- imgui.BeginChild('settings_general', {0, 200}, true);
     imgui.BeginChild('settings_general', {
         0, imgui.GetTextLineHeightWithSpacing() * MAX_HEIGHT_IN_LINES / 2
     }, true, ImGuiWindowFlags_AlwaysAutoResize);
@@ -155,7 +154,6 @@ local function render_general_config(settings)
     imgui.SameLine();
     imgui.EndChild();
     imgui.Text('Clamming Display Settings');
-    -- imgui.BeginChild('clam_general', {0, 200}, true);
     imgui.BeginChild('clam_general', {
         0, imgui.GetTextLineHeightWithSpacing() * MAX_HEIGHT_IN_LINES / 2
     }, true, ImGuiWindowFlags_AlwaysAutoResize);
@@ -218,7 +216,6 @@ end
 
 local function render_item_price_config(settings)
     imgui.Text('Item Prices');
-    -- imgui.BeginChild('settings_general', {0, 470}, true);
     imgui.BeginChild('settings_general', {
         0, imgui.GetTextLineHeightWithSpacing() * MAX_HEIGHT_IN_LINES
     }, true, ImGuiWindowFlags_AlwaysAutoResize);
@@ -243,7 +240,6 @@ end
 
 local function render_item_weight_config(settings)
     imgui.Text('Item Weights');
-    -- imgui.BeginChild('settings_general', {0, 470}, true);
     imgui.BeginChild('settings_general', {
         0, imgui.GetTextLineHeightWithSpacing() * MAX_HEIGHT_IN_LINES
     }, true, ImGuiWindowFlags_AlwaysAutoResize);
@@ -264,8 +260,6 @@ end
 local function render_editor()
     if (not hxiclam.editor.is_open[1]) then return; end
 
-    -- imgui.SetNextWindowSize({580, 600});
-    -- imgui.SetNextWindowSizeConstraints({560, 600}, {FLT_MAX, FLT_MAX});
     imgui.SetNextWindowSize({0, 0}, ImGuiCond_Always);
     if (imgui.Begin('HXIClam##Config', hxiclam.editor.is_open,
                     ImGuiWindowFlags_AlwaysAutoResize)) then
@@ -511,7 +505,7 @@ end
 local function update_tones()
     hxiclam.settings.available_tones = T {};
     local tone_path = ("%stones/"):format(addon.path);
-    local cmd = 'dir "' .. tone_path .. '" /B'
+    local cmd = 'dir "' .. tone_path .. '" /B';
     local idx = 1;
     for file in io.popen(cmd):lines() do
         hxiclam.settings.available_tones[idx] = file;
