@@ -4,7 +4,7 @@
 * Used SlowedHaste HGather as a base for this addon: https://github.com/SlowedHaste/HGather
 --]] addon.name = 'hxiclam';
 addon.author = 'jimmy58663';
-addon.version = '1.2.3';
+addon.version = '1.2.4';
 addon.desc = 'HorizonXI clamming tracker addon.';
 addon.link = 'https://github.com/jimmy58663/HXIClam';
 addon.commands = {'/hxiclam'};
