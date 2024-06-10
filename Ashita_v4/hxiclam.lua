@@ -32,7 +32,7 @@ local logs = T {
 -- Default Settings
 local default_settings = T {
     visible = T {true},
-    moon_display = T {true},
+    moon_display = T {false},
     display_timeout = T {600},
     opacity = T {1.0},
     padding = T {1.0},
@@ -65,7 +65,12 @@ local default_settings = T {
 
     last_dig = 0,
     dig_timer = 0,
-    dig_timer_countdown = true
+    dig_timer_countdown = true,
+
+    enable_tone = T {true},
+    tone = 'clam.wav',
+    tone_selected_idx = 1,
+    available_tones = T {'clam.wav'}
 };
 
 -- HXIClam Variables
@@ -81,21 +86,48 @@ local hxiclam = T {
     last_attempt = ashita.time.clock()['ms'],
     pricing = T {},
     weights = T {},
-    gil_per_hour = 0
+    gil_per_hour = 0,
+
+    play_tone = false
 };
+
+local MAX_HEIGHT_IN_LINES = 26;
 
 --[[
 * Renders the HXIClam settings editor.
 --]]
 local function render_general_config(settings)
     imgui.Text('General Settings');
-    imgui.BeginChild('settings_general', {0, 200}, true);
+    -- imgui.BeginChild('settings_general', {0, 200}, true);
+    imgui.BeginChild('settings_general', {
+        0, imgui.GetTextLineHeightWithSpacing() * MAX_HEIGHT_IN_LINES / 2
+    }, true, ImGuiWindowFlags_AlwaysAutoResize);
     if (imgui.Checkbox('Visible', hxiclam.settings.visible)) then
         -- if the checkbox is interacted with, reset the last_attempt
         -- to force the window back open
         hxiclam.last_attempt = ashita.time.clock()['ms'];
     end
     imgui.ShowHelp('Toggles if HXIClam is visible or not.');
+    imgui.Checkbox('Enable sound', hxiclam.settings.enable_tone);
+    imgui.ShowHelp(
+        'Enable/Disable a tone to be played when the dig timer is ready.');
+    imgui.SameLine();
+    if (imgui.BeginCombo('', hxiclam.settings.tone)) then
+        for k, v in pairs(hxiclam.settings.available_tones) do
+            local is_selected = k == hxiclam.settings.tone_selected_idx;
+            if (imgui.Selectable(v, is_selected)) then
+                hxiclam.settings.tone_selected_idx = k;
+                hxiclam.settings.tone = v;
+            end
+            if (is_selected) then imgui.SetItemDefaultFocus(); end
+        end
+        imgui.EndCombo();
+    end
+    imgui.SameLine();
+    if (imgui.ArrowButton("Tone_Test", ImGuiDir_Right)) then
+        ashita.misc.play_sound(("%stones/%s"):format(addon.path,
+                                                     hxiclam.settings.tone));
+    end
     imgui.SliderFloat('Opacity', hxiclam.settings.opacity, 0.125, 1.0, '%.3f');
     imgui.ShowHelp('The opacity of the HXIClam window.');
     imgui.SliderFloat('Font Scale', hxiclam.settings.font_scale, 0.1, 2.0,
@@ -120,9 +152,13 @@ local function render_general_config(settings)
     imgui.Checkbox('Enable Logging', hxiclam.settings.enable_logging);
     imgui.ShowHelp(
         'Toggles whether drops and bucket turnins are logged in a text file.');
+    imgui.SameLine();
     imgui.EndChild();
     imgui.Text('Clamming Display Settings');
-    imgui.BeginChild('clam_general', {0, 200}, true);
+    -- imgui.BeginChild('clam_general', {0, 200}, true);
+    imgui.BeginChild('clam_general', {
+        0, imgui.GetTextLineHeightWithSpacing() * MAX_HEIGHT_IN_LINES / 2
+    }, true, ImGuiWindowFlags_AlwaysAutoResize);
     if (imgui.RadioButton('Hide Session Stats',
                           hxiclam.settings.session_view == 0)) then
         hxiclam.settings.session_view = 0;
@@ -182,7 +218,10 @@ end
 
 local function render_item_price_config(settings)
     imgui.Text('Item Prices');
-    imgui.BeginChild('settings_general', {0, 470}, true);
+    -- imgui.BeginChild('settings_general', {0, 470}, true);
+    imgui.BeginChild('settings_general', {
+        0, imgui.GetTextLineHeightWithSpacing() * MAX_HEIGHT_IN_LINES
+    }, true, ImGuiWindowFlags_AlwaysAutoResize);
 
     imgui.InputInt('Bucket Cost', hxiclam.settings.clamming.bucket_cost);
     imgui.ShowHelp('Cost of a single bucket.');
@@ -191,7 +230,9 @@ local function render_item_price_config(settings)
 
     local temp_strings = T {};
     temp_strings[1] = table.concat(hxiclam.settings.item_index, '\n');
-    if (imgui.InputTextMultiline('\nItem Prices', temp_strings, 8192, {0, 420})) then
+    if (imgui.InputTextMultiline('\nItem Prices', temp_strings, 8192, {
+        0, imgui.GetTextLineHeightWithSpacing() * (MAX_HEIGHT_IN_LINES - 3)
+    })) then
         hxiclam.settings.item_index = split(temp_strings[1], '\n');
         table.sort(hxiclam.settings.item_index);
     end
@@ -202,11 +243,16 @@ end
 
 local function render_item_weight_config(settings)
     imgui.Text('Item Weights');
-    imgui.BeginChild('settings_general', {0, 470}, true);
+    -- imgui.BeginChild('settings_general', {0, 470}, true);
+    imgui.BeginChild('settings_general', {
+        0, imgui.GetTextLineHeightWithSpacing() * MAX_HEIGHT_IN_LINES
+    }, true, ImGuiWindowFlags_AlwaysAutoResize);
 
     local temp_strings = T {};
     temp_strings[1] = table.concat(hxiclam.settings.item_weight_index, '\n');
-    if (imgui.InputTextMultiline('\nItem Weights', temp_strings, 8192, {0, 420})) then
+    if (imgui.InputTextMultiline('\nItem Weights', temp_strings, 8192, {
+        0, imgui.GetTextLineHeightWithSpacing() * (MAX_HEIGHT_IN_LINES - 3)
+    })) then
         hxiclam.settings.item_weight_index = split(temp_strings[1], '\n');
         table.sort(hxiclam.settings.item_weight_index);
     end
@@ -218,9 +264,11 @@ end
 local function render_editor()
     if (not hxiclam.editor.is_open[1]) then return; end
 
-    imgui.SetNextWindowSize({580, 600});
-    imgui.SetNextWindowSizeConstraints({560, 600}, {FLT_MAX, FLT_MAX});
-    if (imgui.Begin('HXIClam##Config', hxiclam.editor.is_open)) then
+    -- imgui.SetNextWindowSize({580, 600});
+    -- imgui.SetNextWindowSizeConstraints({560, 600}, {FLT_MAX, FLT_MAX});
+    imgui.SetNextWindowSize({0, 0}, ImGuiCond_Always);
+    if (imgui.Begin('HXIClam##Config', hxiclam.editor.is_open,
+                    ImGuiWindowFlags_AlwaysAutoResize)) then
 
         -- imgui.SameLine();
         if (imgui.Button('Save Settings')) then
@@ -246,6 +294,12 @@ local function render_editor()
             print(chat.header(addon.name):append(
                       chat.message('Pricing updated.')));
         end
+        imgui.SameLine();
+        if (imgui.Button('Update Weights')) then
+            update_weights();
+            print(chat.header(addon.name):append(
+                      chat.message('Weights updated.')));
+        end
         if (imgui.Button('Clear Session')) then
             clear_rewards();
             print(chat.header(addon.name):append(
@@ -263,12 +317,6 @@ local function render_editor()
             clear_bucket();
             print(chat.header(addon.name):append(chat.message(
                                                      'Cleared session and bucket.')));
-        end
-        imgui.SameLine();
-        if (imgui.Button('Update Weights')) then
-            update_weights();
-            print(chat.header(addon.name):append(
-                      chat.message('Weights updated.')));
         end
 
         imgui.Separator();
@@ -460,6 +508,17 @@ local function update_weights()
     end
 end
 
+local function update_tones()
+    hxiclam.settings.available_tones = T {};
+    local tone_path = ("%stones/"):format(addon.path);
+    local cmd = 'dir "' .. tone_path .. '" /B'
+    local idx = 1;
+    for file in io.popen(cmd):lines() do
+        hxiclam.settings.available_tones[idx] = file;
+        idx = idx + 1;
+    end
+end
+
 local function clear_rewards()
     hxiclam.last_attempt = ashita.time.clock()['ms'];
     hxiclam.settings.first_attempt = 0;
@@ -472,6 +531,14 @@ local function clear_bucket()
     hxiclam.settings.bucket = {};
     hxiclam.settings.bucket_weight = 0;
     hxiclam.settings.bucket_capacity = 50;
+end
+
+local function play_sound()
+    if (hxiclam.settings.enable_tone[1] == true and hxiclam.play_tone == true) then
+        ashita.misc.play_sound(("%stones/%s"):format(addon.path,
+                                                     hxiclam.settings.tone));
+        hxiclam.play_tone = false;
+    end
 end
 
 --[[
@@ -493,6 +560,7 @@ end);
 ashita.events.register('load', 'load_cb', function()
     update_pricing();
     update_weights();
+    update_tones();
     if (hxiclam.settings.reset_on_load[1]) then
         print('Reset bucket and session on reload.');
         clear_rewards();
@@ -543,6 +611,7 @@ ashita.events.register('command', 'command_cb', function(e)
     -- Handle: /hxiclam reload - Reloads the current settings from disk.
     if (#args >= 2 and args[2]:any('reload')) then
         settings.reload();
+        update_tones();
         print(chat.header(addon.name):append(chat.message('Settings reloaded.')));
         return;
     end
@@ -655,6 +724,7 @@ ashita.events.register('text_in', 'text_in_cb', function(e)
         clear_bucket();
         hxiclam.settings.bucket_count = hxiclam.settings.bucket_count + 1;
     elseif (item) then
+        hxiclam.play_tone = true;
         -- Update last dig time and reset dig_timer
         hxiclam.settings.last_dig = ashita.time.clock()['ms'];
 
@@ -797,6 +867,7 @@ ashita.events.register('d3d_present', 'present_cb', function()
         if (timer_display == 'Dig Ready') then
             imgui.TextColored(hxiclam.settings.dig_timer_ready_color,
                               tostring(timer_display));
+            play_sound();
         else
             imgui.Text(tostring(timer_display));
         end
