@@ -26,7 +26,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --]] _addon.name = 'hxiclam';
 _addon.author = 'jimmy58663';
-_addon.version = '1.2.3';
+_addon.version = '1.2.4';
 -- _addon.desc      = 'HorizonXI clamming tracker addon.';
 -- _addon.link      = 'https://github.com/jimmy58663/HXIClam';
 _addon.commands = {'hxiclam'};
@@ -68,6 +68,9 @@ local default_settings = T {
     last_dig = 0,
     dig_timer = 0,
     dig_timer_countdown = true,
+
+    enable_tone = T {true},
+    tone = 'clam.wav',
 
     -- Text object display settings
     display = {
@@ -122,7 +125,9 @@ local hxiclam = T {
     rewards = {},
     bucket_count = 0,
     item_count = 0,
-    first_attempt = 0
+    first_attempt = 0,
+
+    play_tone = false
 };
 
 -- Display setup
@@ -333,6 +338,13 @@ local function clear_bucket()
     save_session_data();
 end
 
+local function play_sound()
+    if (hxiclam.settings.enable_tone[1] == true and hxiclam.play_tone == true) then
+        windower.play_sound(("%stones/%s"):format(windower.addon_path,
+                                                  hxiclam.settings.tone));
+        hxiclam.play_tone = false;
+    end
+end
 ----------------------------------------------------------------------------------------------------
 -- Events
 ----------------------------------------------------------------------------------------------------
@@ -505,6 +517,7 @@ windower.register_event('incoming text',
             clear_bucket();
             hxiclam.bucket_count = hxiclam.bucket_count + 1;
         elseif (item) then
+            hxiclam.play_tone = true;
             -- Update last dig time and reset dig_timer
             hxiclam.settings.last_dig = os.time();
 
@@ -623,6 +636,7 @@ windower.register_event('prerender', function()
         local color = hxiclam.settings.dig_timer_ready_color;
         output_text = output_text ..
                           timer_display:text_color(color[1], color[2], color[3]);
+        play_sound();
     else
         output_text = output_text .. tostring(timer_display);
     end
