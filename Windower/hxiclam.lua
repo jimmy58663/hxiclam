@@ -26,7 +26,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --]] _addon.name = 'hxiclam';
 _addon.author = 'jimmy58663';
-_addon.version = '1.2.4';
+_addon.version = '1.2.5';
 -- _addon.desc      = 'HorizonXI clamming tracker addon.';
 -- _addon.link      = 'https://github.com/jimmy58663/HXIClam';
 _addon.commands = {'hxiclam'};
@@ -270,6 +270,14 @@ local function update_weights()
         end
 
         hxiclam.weights[itemname] = itemvalue;
+
+        hxiclam.bucket_weight = 0
+        for k, v in pairs(hxiclam.bucket) do
+            if (hxiclam.weights[k] ~= nil) then
+                hxiclam.bucket_weight = hxiclam.bucket_weight +
+                                            hxiclam.weights[k];
+            end
+        end
     end
 end
 
