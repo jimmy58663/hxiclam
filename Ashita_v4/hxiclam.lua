@@ -4,7 +4,7 @@
 * Used SlowedHaste HGather as a base for this addon: https://github.com/SlowedHaste/HGather
 --]] addon.name = 'hxiclam';
 addon.author = 'jimmy58663';
-addon.version = '1.2.4';
+addon.version = '1.2.5';
 addon.desc = 'HorizonXI clamming tracker addon.';
 addon.link = 'https://github.com/jimmy58663/HXIClam';
 addon.commands = {'/hxiclam'};
@@ -92,6 +92,213 @@ local hxiclam = T {
 };
 
 local MAX_HEIGHT_IN_LINES = 26;
+
+----------------------------------------------------------------------------------------------------
+-- Helper functions
+----------------------------------------------------------------------------------------------------
+local function split(inputstr, sep)
+    if sep == nil then sep = '%s'; end
+    local t = {};
+    for str in string.gmatch(inputstr, '([^' .. sep .. ']+)') do
+        table.insert(t, str);
+    end
+    return t;
+end
+
+----------------------------------------------------------------------------------------------------
+-- Format numbers with commas
+-- https://stackoverflow.com/questions/10989788/format-integer-in-lua
+----------------------------------------------------------------------------------------------------
+local function format_int(number)
+    if (string.len(number) < 4) then return number end
+    if (number ~= nil and number ~= '' and type(number) == 'number') then
+        local i, j, minus, int, fraction =
+            tostring(number):find('([-]?)(%d+)([.]?%d*)');
+
+        -- we sometimes get a nil int from the above tostring, just return number in those cases
+        if (int == nil) then return number end
+
+        -- reverse the int-string and append a comma to all blocks of 3 digits
+        int = int:reverse():gsub("(%d%d%d)", "%1,");
+
+        -- reverse the int-string back remove an optional comma and put the
+        -- optional minus and fractional part back
+        return minus .. int:reverse():gsub("^,", "") .. fraction;
+    else
+        return 'NaN';
+    end
+end
+
+function WriteLog(logtype, item)
+    -- Current log types supported are drop and turnin
+    local logdir = nil
+    if logtype == 'drop' then
+        logdir = logs.drop_log_dir;
+    elseif logtype == 'turnin' then
+        logdir = logs.turnin_log_dir;
+    end
+
+    local datetime = os.date('*t');
+    local log_file_name = ('%s_%.4u.%.2u.%.2u.log'):fmt(logs.char_name,
+                                                        datetime.year,
+                                                        datetime.month,
+                                                        datetime.day);
+    local full_directory = ('%s/addons/hxiclam/logs/%s/'):fmt(
+                               AshitaCore:GetInstallPath(), logdir);
+
+    if (not ashita.fs.exists(full_directory)) then
+        ashita.fs.create_dir(full_directory);
+    end
+
+    local file = io.open(('%s/%s'):fmt(full_directory, log_file_name), 'a');
+    if (file ~= nil) then
+        local filedata = ('%s, %s\n'):fmt(os.date('[%H:%M:%S]'), item);
+        file:write(filedata);
+        file:close();
+    end
+end
+
+----------------------------------------------------------------------------------------------------
+-- Helper functions borrowed from luashitacast
+----------------------------------------------------------------------------------------------------
+function GetTimestamp()
+    local pVanaTime = ashita.memory.find('FFXiMain.dll', 0,
+                                         'B0015EC390518B4C24088D4424005068', 0,
+                                         0);
+    local pointer = ashita.memory.read_uint32(pVanaTime + 0x34);
+    local rawTime = ashita.memory.read_uint32(pointer + 0x0C) + 92514960;
+    local timestamp = {};
+    timestamp.day = math.floor(rawTime / 3456);
+    timestamp.hour = math.floor(rawTime / 144) % 24;
+    timestamp.minute = math.floor((rawTime % 144) / 2.4);
+    return timestamp;
+end
+
+function GetWeather()
+    local pWeather = ashita.memory.find('FFXiMain.dll', 0,
+                                        '66A1????????663D????72', 0, 0);
+    local pointer = ashita.memory.read_uint32(pWeather + 0x02);
+    return ashita.memory.read_uint8(pointer + 0);
+end
+
+function GetMoon()
+    local timestamp = GetTimestamp();
+    local moon_index = ((timestamp.day + 26) % 84) + 1;
+    local moon_table = {};
+    moon_table.MoonPhase = data.MoonPhase[moon_index];
+    moon_table.MoonPhasePercent = data.MoonPhasePercent[moon_index];
+    return moon_table;
+end
+
+----------------------------------------------------------------------------------------------------
+-- Core functions
+----------------------------------------------------------------------------------------------------
+--[[
+* Prints the addon help information.
+*
+* @param {boolean} isError - Flag if this function was invoked due to an error.
+--]]
+local function print_help(isError)
+    -- Print the help header..
+    if (isError) then
+        print(chat.header(addon.name):append(chat.error(
+                                                 'Invalid command syntax for command: '))
+                  :append(chat.success('/' .. addon.name)));
+    else
+        print(
+            chat.header(addon.name):append(chat.message('Available commands:')));
+    end
+
+    local cmds = T {
+        {'/hxiclam', 'Toggles the HXIClam editor.'},
+        {'/hxiclam edit', 'Toggles the HXIClam editor.'},
+        {'/hxiclam save', 'Saves the current settings to disk.'},
+        {'/hxiclam reload', 'Reloads the current settings from disk.'},
+        {'/hxiclam clear', 'Clears the HXIClam bucket and session stats.'},
+        {'/hxiclam clear bucket', 'Clears the HXIClam bucket stats.'},
+        {'/hxiclam clear session', 'Clears the HXIClam session stats.'},
+        {'/hxiclam show', 'Shows the HXIClam information.'},
+        {'/hxiclam show session', 'Shows the HXIClam session stats.'},
+        {'/hxiclam hide', 'Hides the HXIClam information.'},
+        {'/hxiclam hide session', 'Hides the HXIClam session stats.'},
+        {'/hxiclam update', 'Updates the HXIClam item pricing and weight info.'},
+        {'/hxiclam update pricing', 'Updates the HXIClam item pricing info.'},
+        {'/hxiclam update weights', 'Updates the HXIClam item weight info.'}
+    };
+
+    -- Print the command list..
+    cmds:ieach(function(v)
+        print(chat.header(addon.name):append(chat.error('Usage: ')):append(
+                  chat.message(v[1]):append(' - ')):append(chat.color1(6, v[2])));
+    end);
+end
+
+local function update_pricing()
+    local itemname;
+    local itemvalue;
+    for k, v in pairs(hxiclam.settings.item_index) do
+        for k2, v2 in pairs(split(v, ':')) do
+            if (k2 == 1) then itemname = v2; end
+            if (k2 == 2) then itemvalue = v2; end
+        end
+
+        hxiclam.pricing[itemname] = itemvalue;
+    end
+end
+
+local function update_weights()
+    local itemname;
+    local itemvalue;
+    for k, v in pairs(hxiclam.settings.item_weight_index) do
+        for k2, v2 in pairs(split(v, ':')) do
+            if (k2 == 1) then itemname = v2; end
+            if (k2 == 2) then itemvalue = v2; end
+        end
+
+        hxiclam.weights[itemname] = itemvalue;
+    end
+
+    hxiclam.settings.bucket_weight = 0;
+    for k, v in pairs(hxiclam.settings.bucket) do
+        if (hxiclam.weights[k] ~= nil) then
+            hxiclam.settings.bucket_weight =
+                hxiclam.settings.bucket_weight + hxiclam.weights[k];
+        end
+    end
+end
+
+local function update_tones()
+    hxiclam.settings.available_tones = T {};
+    local tone_path = ("%stones/"):format(addon.path);
+    local cmd = 'dir "' .. tone_path .. '" /B';
+    local idx = 1;
+    for file in io.popen(cmd):lines() do
+        hxiclam.settings.available_tones[idx] = file;
+        idx = idx + 1;
+    end
+end
+
+local function clear_rewards()
+    hxiclam.last_attempt = ashita.time.clock()['ms'];
+    hxiclam.settings.first_attempt = 0;
+    hxiclam.settings.rewards = {};
+    hxiclam.settings.item_count = 0;
+    hxiclam.settings.bucket_count = 0;
+end
+
+local function clear_bucket()
+    hxiclam.settings.bucket = {};
+    hxiclam.settings.bucket_weight = 0;
+    hxiclam.settings.bucket_capacity = 50;
+end
+
+local function play_sound()
+    if (hxiclam.settings.enable_tone[1] == true and hxiclam.play_tone == true) then
+        ashita.misc.play_sound(("%stones/%s"):format(addon.path,
+                                                     hxiclam.settings.tone));
+        hxiclam.play_tone = false;
+    end
+end
 
 --[[
 * Renders the HXIClam settings editor.
@@ -334,205 +541,6 @@ local function render_editor()
 
     end
     imgui.End();
-end
-
-----------------------------------------------------------------------------------------------------
--- Helper functions
-----------------------------------------------------------------------------------------------------
-local function split(inputstr, sep)
-    if sep == nil then sep = '%s'; end
-    local t = {};
-    for str in string.gmatch(inputstr, '([^' .. sep .. ']+)') do
-        table.insert(t, str);
-    end
-    return t;
-end
-
-----------------------------------------------------------------------------------------------------
--- Format numbers with commas
--- https://stackoverflow.com/questions/10989788/format-integer-in-lua
-----------------------------------------------------------------------------------------------------
-local function format_int(number)
-    if (string.len(number) < 4) then return number end
-    if (number ~= nil and number ~= '' and type(number) == 'number') then
-        local i, j, minus, int, fraction =
-            tostring(number):find('([-]?)(%d+)([.]?%d*)');
-
-        -- we sometimes get a nil int from the above tostring, just return number in those cases
-        if (int == nil) then return number end
-
-        -- reverse the int-string and append a comma to all blocks of 3 digits
-        int = int:reverse():gsub("(%d%d%d)", "%1,");
-
-        -- reverse the int-string back remove an optional comma and put the 
-        -- optional minus and fractional part back
-        return minus .. int:reverse():gsub("^,", "") .. fraction;
-    else
-        return 'NaN';
-    end
-end
-
-function WriteLog(logtype, item)
-    -- Current log types supported are drop and turnin
-    local logdir = nil
-    if logtype == 'drop' then
-        logdir = logs.drop_log_dir;
-    elseif logtype == 'turnin' then
-        logdir = logs.turnin_log_dir;
-    end
-
-    local datetime = os.date('*t');
-    local log_file_name = ('%s_%.4u.%.2u.%.2u.log'):fmt(logs.char_name,
-                                                        datetime.year,
-                                                        datetime.month,
-                                                        datetime.day);
-    local full_directory = ('%s/addons/hxiclam/logs/%s/'):fmt(
-                               AshitaCore:GetInstallPath(), logdir);
-
-    if (not ashita.fs.exists(full_directory)) then
-        ashita.fs.create_dir(full_directory);
-    end
-
-    local file = io.open(('%s/%s'):fmt(full_directory, log_file_name), 'a');
-    if (file ~= nil) then
-        local filedata = ('%s, %s\n'):fmt(os.date('[%H:%M:%S]'), item);
-        file:write(filedata);
-        file:close();
-    end
-end
-
-----------------------------------------------------------------------------------------------------
--- Helper functions borrowed from luashitacast
-----------------------------------------------------------------------------------------------------
-function GetTimestamp()
-    local pVanaTime = ashita.memory.find('FFXiMain.dll', 0,
-                                         'B0015EC390518B4C24088D4424005068', 0,
-                                         0);
-    local pointer = ashita.memory.read_uint32(pVanaTime + 0x34);
-    local rawTime = ashita.memory.read_uint32(pointer + 0x0C) + 92514960;
-    local timestamp = {};
-    timestamp.day = math.floor(rawTime / 3456);
-    timestamp.hour = math.floor(rawTime / 144) % 24;
-    timestamp.minute = math.floor((rawTime % 144) / 2.4);
-    return timestamp;
-end
-
-function GetWeather()
-    local pWeather = ashita.memory.find('FFXiMain.dll', 0,
-                                        '66A1????????663D????72', 0, 0);
-    local pointer = ashita.memory.read_uint32(pWeather + 0x02);
-    return ashita.memory.read_uint8(pointer + 0);
-end
-
-function GetMoon()
-    local timestamp = GetTimestamp();
-    local moon_index = ((timestamp.day + 26) % 84) + 1;
-    local moon_table = {};
-    moon_table.MoonPhase = data.MoonPhase[moon_index];
-    moon_table.MoonPhasePercent = data.MoonPhasePercent[moon_index];
-    return moon_table;
-end
-
-----------------------------------------------------------------------------------------------------
--- Core functions
-----------------------------------------------------------------------------------------------------
---[[
-* Prints the addon help information.
-*
-* @param {boolean} isError - Flag if this function was invoked due to an error.
---]]
-local function print_help(isError)
-    -- Print the help header..
-    if (isError) then
-        print(chat.header(addon.name):append(chat.error(
-                                                 'Invalid command syntax for command: '))
-                  :append(chat.success('/' .. addon.name)));
-    else
-        print(
-            chat.header(addon.name):append(chat.message('Available commands:')));
-    end
-
-    local cmds = T {
-        {'/hxiclam', 'Toggles the HXIClam editor.'},
-        {'/hxiclam edit', 'Toggles the HXIClam editor.'},
-        {'/hxiclam save', 'Saves the current settings to disk.'},
-        {'/hxiclam reload', 'Reloads the current settings from disk.'},
-        {'/hxiclam clear', 'Clears the HXIClam bucket and session stats.'},
-        {'/hxiclam clear bucket', 'Clears the HXIClam bucket stats.'},
-        {'/hxiclam clear session', 'Clears the HXIClam session stats.'},
-        {'/hxiclam show', 'Shows the HXIClam information.'},
-        {'/hxiclam show session', 'Shows the HXIClam session stats.'},
-        {'/hxiclam hide', 'Hides the HXIClam information.'},
-        {'/hxiclam hide session', 'Hides the HXIClam session stats.'},
-        {'/hxiclam update', 'Updates the HXIClam item pricing and weight info.'},
-        {'/hxiclam update pricing', 'Updates the HXIClam item pricing info.'},
-        {'/hxiclam update weights', 'Updates the HXIClam item weight info.'}
-    };
-
-    -- Print the command list..
-    cmds:ieach(function(v)
-        print(chat.header(addon.name):append(chat.error('Usage: ')):append(
-                  chat.message(v[1]):append(' - ')):append(chat.color1(6, v[2])));
-    end);
-end
-
-local function update_pricing()
-    local itemname;
-    local itemvalue;
-    for k, v in pairs(hxiclam.settings.item_index) do
-        for k2, v2 in pairs(split(v, ':')) do
-            if (k2 == 1) then itemname = v2; end
-            if (k2 == 2) then itemvalue = v2; end
-        end
-
-        hxiclam.pricing[itemname] = itemvalue;
-    end
-end
-
-local function update_weights()
-    local itemname;
-    local itemvalue;
-    for k, v in pairs(hxiclam.settings.item_weight_index) do
-        for k2, v2 in pairs(split(v, ':')) do
-            if (k2 == 1) then itemname = v2; end
-            if (k2 == 2) then itemvalue = v2; end
-        end
-
-        hxiclam.weights[itemname] = itemvalue;
-    end
-end
-
-local function update_tones()
-    hxiclam.settings.available_tones = T {};
-    local tone_path = ("%stones/"):format(addon.path);
-    local cmd = 'dir "' .. tone_path .. '" /B';
-    local idx = 1;
-    for file in io.popen(cmd):lines() do
-        hxiclam.settings.available_tones[idx] = file;
-        idx = idx + 1;
-    end
-end
-
-local function clear_rewards()
-    hxiclam.last_attempt = ashita.time.clock()['ms'];
-    hxiclam.settings.first_attempt = 0;
-    hxiclam.settings.rewards = {};
-    hxiclam.settings.item_count = 0;
-    hxiclam.settings.bucket_count = 0;
-end
-
-local function clear_bucket()
-    hxiclam.settings.bucket = {};
-    hxiclam.settings.bucket_weight = 0;
-    hxiclam.settings.bucket_capacity = 50;
-end
-
-local function play_sound()
-    if (hxiclam.settings.enable_tone[1] == true and hxiclam.play_tone == true) then
-        ashita.misc.play_sound(("%stones/%s"):format(addon.path,
-                                                     hxiclam.settings.tone));
-        hxiclam.play_tone = false;
-    end
 end
 
 --[[
