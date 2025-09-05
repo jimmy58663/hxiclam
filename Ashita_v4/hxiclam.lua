@@ -873,38 +873,61 @@ ashita.events.register('d3d_present', 'present_cb', function()
         else
             imgui.Text(tostring(timer_display));
         end
-
-        local bucket_contents = '';
+        
         for k, v in pairs(hxiclam.settings.bucket) do
-            local itemTotal = 0;
             if (hxiclam.pricing[k] ~= nil) then
                 bucket_total = bucket_total + hxiclam.pricing[k] * v;
-                itemTotal = v * hxiclam.pricing[k];
-            end
-
-            if (bucket_contents == '') then
-                bucket_contents = k .. ': ' .. 'x' .. format_int(v) .. ' (' ..
-                                      format_int(itemTotal) .. 'g)';
-            else
-                bucket_contents = bucket_contents .. '\n' .. k .. ': ' .. 'x' ..
-                                      format_int(v) .. ' (' ..
-                                      format_int(itemTotal) .. 'g)';
             end
         end
 
         if (hxiclam.settings.clamming.bucket_subtract[1]) then
             bucket_total = bucket_total -
                                hxiclam.settings.clamming.bucket_cost[1];
-            imgui.Text('Bucket Profit: ' .. format_int(bucket_total) .. 'g');
+            imgui.Text('Bucket Profit: ');
+            imgui.SameLine();
+
+            if (bucket_total <= 0) then
+                imgui.TextColored(hxiclam.settings.bucket_weight_crit_color, format_int(bucket_total) .. 'g');
+            elseif (bucket_total >= 1000 and bucket_total < 5000) then
+                imgui.TextColored(hxiclam.settings.bucket_weight_warn_color, format_int(bucket_total) .. 'g');
+            elseif (bucket_total >= 5000) then
+                imgui.TextColored(hxiclam.settings.dig_timer_ready_color, format_int(bucket_total) .. 'g');
+            else
+                imgui.Text(tostring(format_int(bucket_total) .. 'g'));
+            end
         else
-            imgui.Text('Bucket Revenue: ' .. format_int(bucket_total) .. 'g');
+            imgui.Text('Bucket Revenue: ');
+            imgui.SameLine();
+
+            if (bucket_total <= 500) then
+                imgui.TextColored(hxiclam.settings.bucket_weight_crit_color, format_int(bucket_total) .. 'g');
+            elseif (bucket_total > 500 and bucket_total < 5000) then
+                imgui.TextColored(hxiclam.settings.bucket_weight_warn_color, format_int(bucket_total) .. 'g');
+            else
+                imgui.TextColored(hxiclam.settings.dig_timer_ready_color, format_int(bucket_total) .. 'g');
+            end
         end
         imgui.Separator();
 
-        imgui.Text(bucket_contents);
+        for k, v in pairs(hxiclam.settings.bucket) do
+            local itemTotal = 0;
+            local text = '';
+            itemPrice = tonumber(hxiclam.pricing[k]);
+            itemTotal = hxiclam.pricing[k] * v;
+            text = k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
+            
+            if (itemPrice == 0) then
+                imgui.TextColored(hxiclam.settings.bucket_weight_crit_color, text);
+            elseif (itemPrice >= 500 and itemPrice < 1000) then
+                imgui.TextColored(hxiclam.settings.bucket_weight_warn_color, text);
+            elseif (itemPrice >= 1000) then
+                imgui.TextColored(hxiclam.settings.dig_timer_ready_color, text);
+            else
+                imgui.Text(text);
+            end
+        end
 
         if (hxiclam.settings.session_view > 0) then
-            imgui.Separator();
             imgui.Separator();
             imgui.SetWindowFontScale(hxiclam.settings.font_scale[1] + 0.1);
             imgui.Text('Session Stats:');
