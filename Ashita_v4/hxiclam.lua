@@ -68,7 +68,15 @@ local default_settings = T {
     enable_tone = T {true},
     tone = 'clam.wav',
     tone_selected_idx = 1,
-    available_tones = T {'clam.wav'}
+    available_tones = T {'clam.wav'},
+
+    enable_item_color = T {false},
+    zero_value_item_color = {1.0, 0.0, 0.0, 1.0}, -- red
+    mid_tier_item_color = {1.0, 1.0, 0.0, 1.0}, -- yellow
+    mid_tier_gil_threshold = T {500},
+    high_tier_item_color = {0.0, 1.0, 0.0, 1.0}, -- green
+    high_tier_gil_threshold = T {1000}
+
 };
 
 -- HXIClam Variables
@@ -318,10 +326,14 @@ local function render_general_config(settings)
     imgui.SliderFloat('Font Scale', hxiclam.settings.font_scale, 0.1, 2.0,
                       '%.3f');
     imgui.ShowHelp('The scaling of the font size.');
+    imgui.SliderFloat('Weight Font Scale',
+                      hxiclam.settings.bucket_weight_font_scale, 0.1, 2.0,
+                      '%.3f');
+    imgui.ShowHelp('The scaling of the font size for bucket weight.');
+
     imgui.InputInt('Display Timeout', hxiclam.settings.display_timeout);
     imgui.ShowHelp(
         'How long should the display window stay open after the last dig.');
-
     imgui.Checkbox('Reset Rewards On Load', hxiclam.settings.reset_on_load);
     imgui.ShowHelp(
         'Toggles whether we reset rewards each time the addon is loaded.');
@@ -365,11 +377,6 @@ local function render_general_config(settings)
                    hxiclam.settings.clamming.bucket_subtract);
     imgui.ShowHelp(
         'Toggles if bucket costs are automatically subtracted from gil earned.');
-    imgui.SameLine();
-    imgui.SliderFloat('Weight Font Scale',
-                      hxiclam.settings.bucket_weight_font_scale, 0.1, 2.0,
-                      '%.3f');
-    imgui.ShowHelp('The scaling of the font size for bucket weight.');
     imgui.InputInt('Warning Weight Limit',
                    hxiclam.settings.bucket_weight_warn_threshold);
     imgui.ShowHelp(
@@ -389,7 +396,29 @@ local function render_general_config(settings)
     imgui.ColorEdit4('Dig Timer Ready Color',
                      hxiclam.settings.dig_timer_ready_color);
     imgui.ShowHelp('The color dig timer will turn when it reaches Dig Ready.');
+    imgui.Separator();
 
+    imgui.Checkbox('Enable Item Colors', hxiclam.settings.enable_item_color);
+    imgui.ShowHelp(
+        'Enable or disable coloring of items in your bucket based on gil values.');
+    imgui.ColorEdit4('Zero Value Item Color',
+                     hxiclam.settings.zero_value_item_color);
+    imgui.ShowHelp('The color items will turn if their value is 0.');
+    imgui.InputInt('Mid Tier Gil Threshold',
+                   hxiclam.settings.mid_tier_gil_threshold);
+    imgui.ShowHelp(
+        'How much gil an item is worth to color it Mid Tier Item Color.');
+    imgui.ColorEdit4('Mid Tier Item Color', hxiclam.settings.mid_tier_item_color);
+    imgui.ShowHelp(
+        'The color items will turn if their value is equal to or more than Mid Tier Gil Threshold.');
+    imgui.InputInt('High Tier Gil Threshold',
+                   hxiclam.settings.high_tier_gil_threshold);
+    imgui.ShowHelp(
+        'How much gil an item is worth to color it High Tier Item Color.');
+    imgui.ColorEdit4('High Tier Item Color',
+                     hxiclam.settings.high_tier_item_color);
+    imgui.ShowHelp(
+        'The color items will turn if their value is equal to or more than High Tier Gil Threshold.');
     imgui.EndChild();
 end
 
@@ -895,14 +924,19 @@ ashita.events.register('d3d_present', 'present_cb', function()
             text = k .. ': ' .. 'x' .. format_int(v) .. ' (' ..
                        format_int(itemTotal) .. 'g)';
 
-            if (itemPrice == 0) then
-                imgui.TextColored(hxiclam.settings.bucket_weight_crit_color,
-                                  text);
-            elseif (itemPrice >= 500 and itemPrice < 1000) then
-                imgui.TextColored(hxiclam.settings.bucket_weight_warn_color,
-                                  text);
-            elseif (itemPrice >= 1000) then
-                imgui.TextColored(hxiclam.settings.dig_timer_ready_color, text);
+            if hxiclam.settings.enable_item_color[1] then
+                if (itemPrice == 0) then
+                    imgui.TextColored(hxiclam.settings.zero_value_item_color,
+                                      text);
+                elseif (itemPrice >= hxiclam.settings.mid_tier_gil_threshold[1] and
+                    itemPrice < hxiclam.settings.high_tier_gil_threshold[1]) then
+                    imgui.TextColored(hxiclam.settings.mid_tier_item_color, text);
+                elseif (itemPrice >= hxiclam.settings.high_tier_gil_threshold[1]) then
+                    imgui.TextColored(hxiclam.settings.high_tier_item_color,
+                                      text);
+                else
+                    imgui.Text(text);
+                end
             else
                 imgui.Text(text);
             end
