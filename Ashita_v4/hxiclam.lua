@@ -40,8 +40,6 @@ local default_settings = T {
     item_index = data.ItemIndex,
     item_weight_index = data.ItemWeightIndex,
     font_scale = T {1.0},
-    x = T {100},
-    y = T {100},
     enable_logging = T {true},
 
     -- Clamming Display Settings
@@ -76,9 +74,6 @@ local default_settings = T {
 -- HXIClam Variables
 local hxiclam = T {
     settings = settings.load(default_settings),
-
-    -- hxiclam movement variables..
-    move = T {dragging = false, drag_x = 0, drag_y = 0, shift_down = false},
 
     -- Editor variables..
     editor = T {is_open = T {false}},
@@ -326,6 +321,7 @@ local function render_general_config(settings)
     imgui.InputInt('Display Timeout', hxiclam.settings.display_timeout);
     imgui.ShowHelp(
         'How long should the display window stay open after the last dig.');
+
     imgui.Checkbox('Reset Rewards On Load', hxiclam.settings.reset_on_load);
     imgui.ShowHelp(
         'Toggles whether we reset rewards each time the addon is loaded.');
@@ -893,7 +889,7 @@ ashita.events.register('d3d_present', 'present_cb', function()
             local text = '';
             local itemPrice = 0;
             if (hxiclam.pricing[k] ~= nil) then
-                itemPrice = hxiclam.pricing[k]
+                itemPrice = tonumber(hxiclam.pricing[k]);
                 itemTotal = itemPrice * v;
             end
             text = k .. ': ' .. 'x' .. format_int(v) .. ' (' ..
@@ -965,86 +961,4 @@ ashita.events.register('d3d_present', 'present_cb', function()
     end
     imgui.End();
 
-end);
-
---[[
-* event: key
-* desc : Event called when the addon is processing keyboard input. (WNDPROC)
---]]
-ashita.events.register('key', 'key_callback', function(e)
-    -- Key: VK_SHIFT
-    if (e.wparam == 0x10) then
-        hxiclam.move.shift_down = not (bit.band(e.lparam,
-                                                bit.lshift(0x8000, 0x10)) ==
-                                      bit.lshift(0x8000, 0x10));
-        return;
-    end
-end);
-
---[[
-* event: mouse
-* desc : Event called when the addon is processing mouse input. (WNDPROC)
---]]
-ashita.events.register('mouse', 'mouse_cb', function(e)
-    -- Tests if the given coords are within the equipmon area.
-    local function hit_test(x, y)
-        local e_x = hxiclam.settings.x[1];
-        local e_y = hxiclam.settings.y[1];
-        local e_w = ((32 * hxiclam.settings.scale[1]) * 4) +
-                        hxiclam.settings.padding[1] * 3;
-        local e_h = ((32 * hxiclam.settings.scale[1]) * 4) +
-                        hxiclam.settings.padding[1] * 3;
-
-        return ((e_x <= x) and (e_x + e_w) >= x) and
-                   ((e_y <= y) and (e_y + e_h) >= y);
-    end
-
-    -- Returns if the equipmon object is being dragged.
-    local function is_dragging() return hxiclam.move.dragging; end
-
-    -- Handle the various mouse messages..
-    switch(e.message, {
-        -- Event: Mouse Move
-        [512] = (function()
-            hxiclam.settings.x[1] = e.x - hxiclam.move.drag_x;
-            hxiclam.settings.y[1] = e.y - hxiclam.move.drag_y;
-
-            e.blocked = true;
-        end):cond(is_dragging),
-
-        -- Event: Mouse Left Button Down
-        [513] = (function()
-            if (hxiclam.move.shift_down) then
-                hxiclam.move.dragging = true;
-                hxiclam.move.drag_x = e.x - hxiclam.settings.x[1];
-                hxiclam.move.drag_y = e.y - hxiclam.settings.y[1];
-
-                e.blocked = true;
-            end
-        end):cond(hit_test:bindn(e.x, e.y)),
-
-        -- Event: Mouse Left Button Up
-        [514] = (function()
-            if (hxiclam.move.dragging) then
-                hxiclam.move.dragging = false;
-
-                e.blocked = true;
-            end
-        end):cond(is_dragging),
-
-        -- Event: Mouse Wheel Scroll
-        [522] = (function()
-            if (e.delta < 0) then
-                hxiclam.settings.opacity[1] =
-                    hxiclam.settings.opacity[1] - 0.125;
-            else
-                hxiclam.settings.opacity[1] =
-                    hxiclam.settings.opacity[1] + 0.125;
-            end
-            hxiclam.settings.opacity[1] =
-                hxiclam.settings.opacity[1]:clamp(0.125, 1);
-
-            e.blocked = true;
-        end):cond(hit_test:bindn(e.x, e.y))
-    });
 end);
