@@ -874,7 +874,7 @@ ashita.events.register('d3d_present', 'present_cb', function()
         else
             imgui.Text(tostring(timer_display));
         end
-        
+
         for k, v in pairs(hxiclam.settings.bucket) do
             if (hxiclam.pricing[k] ~= nil) then
                 bucket_total = bucket_total + hxiclam.pricing[k] * v;
@@ -884,28 +884,34 @@ ashita.events.register('d3d_present', 'present_cb', function()
         if (hxiclam.settings.clamming.bucket_subtract[1]) then
             bucket_total = bucket_total -
                                hxiclam.settings.clamming.bucket_cost[1];
-            imgui.Text('Bucket Profit: ');
+            imgui.Text('Bucket Profit:');
             imgui.SameLine();
 
             if (bucket_total <= 0) then
-                imgui.TextColored(hxiclam.settings.bucket_weight_crit_color, format_int(bucket_total) .. 'g');
+                imgui.TextColored(hxiclam.settings.bucket_weight_crit_color,
+                                  format_int(bucket_total) .. 'g');
             elseif (bucket_total >= 1000 and bucket_total < 5000) then
-                imgui.TextColored(hxiclam.settings.bucket_weight_warn_color, format_int(bucket_total) .. 'g');
+                imgui.TextColored(hxiclam.settings.bucket_weight_warn_color,
+                                  format_int(bucket_total) .. 'g');
             elseif (bucket_total >= 5000) then
-                imgui.TextColored(hxiclam.settings.dig_timer_ready_color, format_int(bucket_total) .. 'g');
+                imgui.TextColored(hxiclam.settings.dig_timer_ready_color,
+                                  format_int(bucket_total) .. 'g');
             else
                 imgui.Text(tostring(format_int(bucket_total) .. 'g'));
             end
         else
-            imgui.Text('Bucket Revenue: ');
+            imgui.Text('Bucket Revenue:');
             imgui.SameLine();
 
             if (bucket_total <= 500) then
-                imgui.TextColored(hxiclam.settings.bucket_weight_crit_color, format_int(bucket_total) .. 'g');
+                imgui.TextColored(hxiclam.settings.bucket_weight_crit_color,
+                                  format_int(bucket_total) .. 'g');
             elseif (bucket_total > 500 and bucket_total < 5000) then
-                imgui.TextColored(hxiclam.settings.bucket_weight_warn_color, format_int(bucket_total) .. 'g');
+                imgui.TextColored(hxiclam.settings.bucket_weight_warn_color,
+                                  format_int(bucket_total) .. 'g');
             else
-                imgui.TextColored(hxiclam.settings.dig_timer_ready_color, format_int(bucket_total) .. 'g');
+                imgui.TextColored(hxiclam.settings.dig_timer_ready_color,
+                                  format_int(bucket_total) .. 'g');
             end
         end
         imgui.Separator();
@@ -913,14 +919,20 @@ ashita.events.register('d3d_present', 'present_cb', function()
         for k, v in pairs(hxiclam.settings.bucket) do
             local itemTotal = 0;
             local text = '';
-            itemPrice = tonumber(hxiclam.pricing[k]);
-            itemTotal = hxiclam.pricing[k] * v;
-            text = k .. ': ' .. 'x' .. format_int(v) .. ' (' .. format_int(itemTotal) .. 'g)';
-            
+            local itemPrice = 0;
+            if (hxiclam.pricing[k] ~= nil) then
+                itemPrice = hxiclam.pricing[k]
+                itemTotal = itemPrice * v;
+            end
+            text = k .. ': ' .. 'x' .. format_int(v) .. ' (' ..
+                       format_int(itemTotal) .. 'g)';
+
             if (itemPrice == 0) then
-                imgui.TextColored(hxiclam.settings.bucket_weight_crit_color, text);
+                imgui.TextColored(hxiclam.settings.bucket_weight_crit_color,
+                                  text);
             elseif (itemPrice >= 500 and itemPrice < 1000) then
-                imgui.TextColored(hxiclam.settings.bucket_weight_warn_color, text);
+                imgui.TextColored(hxiclam.settings.bucket_weight_warn_color,
+                                  text);
             elseif (itemPrice >= 1000) then
                 imgui.TextColored(hxiclam.settings.dig_timer_ready_color, text);
             else
