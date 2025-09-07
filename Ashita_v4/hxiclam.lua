@@ -2,6 +2,7 @@
 * Goal of this addon is to calculate weight and cost of items obtained through clamming.
 *
 * Used SlowedHaste HGather as a base for this addon: https://github.com/SlowedHaste/HGather
+* Testing on local server: !pos -371 -1 -421 4
 --]] addon.name = 'hxiclam';
 addon.author = 'jimmy58663';
 addon.version = '1.2.5';
