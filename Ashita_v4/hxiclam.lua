@@ -70,13 +70,19 @@ local default_settings = T {
     tone_selected_idx = 1,
     available_tones = T {'clam.wav'},
 
+    enable_bucket_total_color = T {false},
+    negative_value_bucket_color = {1.0, 0.0, 0.0, 1.0}, -- red
+    mid_value_bucket_color = {1.0, 1.0, 0.0, 1.0}, -- yellow
+    mid_value_bucket_threshold = T {1000},
+    high_value_bucket_color = {0.0, 1.0, 0.0, 1.0}, -- green
+    high_value_bucket_threshold = T {5000},
+
     enable_item_color = T {false},
     zero_value_item_color = {1.0, 0.0, 0.0, 1.0}, -- red
     mid_tier_item_color = {1.0, 1.0, 0.0, 1.0}, -- yellow
     mid_tier_gil_threshold = T {500},
     high_tier_item_color = {0.0, 1.0, 0.0, 1.0}, -- green
     high_tier_gil_threshold = T {1000}
-
 };
 
 -- HXIClam Variables
@@ -94,7 +100,7 @@ local hxiclam = T {
     play_tone = false
 };
 
-local MAX_HEIGHT_IN_LINES = 26;
+local MAX_HEIGHT_IN_LINES = 30;
 
 ----------------------------------------------------------------------------------------------------
 -- Helper functions
@@ -293,7 +299,8 @@ end
 local function render_general_config(settings)
     imgui.Text('General Settings');
     imgui.BeginChild('settings_general', {
-        0, imgui.GetTextLineHeightWithSpacing() * MAX_HEIGHT_IN_LINES / 2
+        0,
+        imgui.GetTextLineHeightWithSpacing() * ((MAX_HEIGHT_IN_LINES / 3) + 1)
     }, true, ImGuiWindowFlags_AlwaysAutoResize);
     if (imgui.Checkbox('Visible', hxiclam.settings.visible)) then
         -- if the checkbox is interacted with, reset the last_attempt
@@ -344,7 +351,7 @@ local function render_general_config(settings)
     imgui.EndChild();
     imgui.Text('Clamming Display Settings');
     imgui.BeginChild('clam_general', {
-        0, imgui.GetTextLineHeightWithSpacing() * MAX_HEIGHT_IN_LINES / 2
+        0, imgui.GetTextLineHeightWithSpacing() * MAX_HEIGHT_IN_LINES * 2 / 3
     }, true, ImGuiWindowFlags_AlwaysAutoResize);
     if (imgui.RadioButton('Hide Session Stats',
                           hxiclam.settings.session_view == 0)) then
@@ -396,6 +403,32 @@ local function render_general_config(settings)
     imgui.ColorEdit4('Dig Timer Ready Color',
                      hxiclam.settings.dig_timer_ready_color);
     imgui.ShowHelp('The color dig timer will turn when it reaches Dig Ready.');
+    imgui.Separator();
+
+    imgui.Checkbox('Enable Bucket Total Colors',
+                   hxiclam.settings.enable_bucket_total_color);
+    imgui.ShowHelp(
+        'Enable or disable coloring of bucket profit/revenue based on gil values.');
+    imgui.ColorEdit4('Negative Value Bucket Color',
+                     hxiclam.settings.negative_value_bucket_color);
+    imgui.ShowHelp(
+        'The color profit/revenue will turn if the total is less than or equal to 0.');
+    imgui.InputInt('Mid Value Bucket Threshold',
+                   hxiclam.settings.mid_value_bucket_threshold);
+    imgui.ShowHelp(
+        'The profit/reveunue threshold to color with Mid Value Bucket Color.');
+    imgui.ColorEdit4('Mid Value Bucket Color',
+                     hxiclam.settings.mid_value_bucket_color);
+    imgui.ShowHelp(
+        'The color profit/revenue will turn if the total is equal or more than Mid Value Bucket Threshold and less than High Value Bucket Threshold.');
+    imgui.InputInt('High Value Bucket Threshold',
+                   hxiclam.settings.high_value_bucket_threshold);
+    imgui.ShowHelp(
+        'The profit/reveunue threshold to color with High Value Bucket Color.');
+    imgui.ColorEdit4('High Value Bucket Color',
+                     hxiclam.settings.high_value_bucket_color);
+    imgui.ShowHelp(
+        'The color profit/revenue will turn if the total equal or more than Mid Value Bucket Threshold.');
     imgui.Separator();
 
     imgui.Checkbox('Enable Item Colors', hxiclam.settings.enable_item_color);
@@ -882,35 +915,31 @@ ashita.events.register('d3d_present', 'present_cb', function()
             bucket_total = bucket_total -
                                hxiclam.settings.clamming.bucket_cost[1];
             imgui.Text('Bucket Profit:');
-            imgui.SameLine();
+        else
+            imgui.Text('Bucket Revenue:');
+        end
+        imgui.SameLine();
 
+        if (hxiclam.settings.enable_bucket_total_color[1]) then
             if (bucket_total <= 0) then
-                imgui.TextColored(hxiclam.settings.bucket_weight_crit_color,
+                imgui.TextColored(hxiclam.settings.negative_value_bucket_color,
                                   format_int(bucket_total) .. 'g');
-            elseif (bucket_total >= 1000 and bucket_total < 5000) then
-                imgui.TextColored(hxiclam.settings.bucket_weight_warn_color,
+            elseif (bucket_total >=
+                hxiclam.settings.mid_value_bucket_threshold[1] and bucket_total <
+                hxiclam.settings.high_value_bucket_threshold[1]) then
+                imgui.TextColored(hxiclam.settings.mid_value_bucket_color,
                                   format_int(bucket_total) .. 'g');
-            elseif (bucket_total >= 5000) then
-                imgui.TextColored(hxiclam.settings.dig_timer_ready_color,
+            elseif (bucket_total >=
+                hxiclam.settings.high_value_bucket_threshold[1]) then
+                imgui.TextColored(hxiclam.settings.high_value_bucket_color,
                                   format_int(bucket_total) .. 'g');
             else
                 imgui.Text(tostring(format_int(bucket_total) .. 'g'));
             end
         else
-            imgui.Text('Bucket Revenue:');
-            imgui.SameLine();
-
-            if (bucket_total <= 500) then
-                imgui.TextColored(hxiclam.settings.bucket_weight_crit_color,
-                                  format_int(bucket_total) .. 'g');
-            elseif (bucket_total > 500 and bucket_total < 5000) then
-                imgui.TextColored(hxiclam.settings.bucket_weight_warn_color,
-                                  format_int(bucket_total) .. 'g');
-            else
-                imgui.TextColored(hxiclam.settings.dig_timer_ready_color,
-                                  format_int(bucket_total) .. 'g');
-            end
+            imgui.Text(tostring(format_int(bucket_total) .. 'g'));
         end
+
         imgui.Separator();
 
         for k, v in pairs(hxiclam.settings.bucket) do
