@@ -33,7 +33,6 @@ local logs = T {
 -- Default Settings
 local default_settings = T {
     visible = T {true},
-    moon_display = T {false},
     display_timeout = T {600},
     opacity = T {1.0},
     padding = T {1.0},
@@ -173,22 +172,6 @@ function GetTimestamp()
     timestamp.hour = math.floor(rawTime / 144) % 24;
     timestamp.minute = math.floor((rawTime % 144) / 2.4);
     return timestamp;
-end
-
-function GetWeather()
-    local pWeather = ashita.memory.find('FFXiMain.dll', 0,
-                                        '66A1????????663D????72', 0, 0);
-    local pointer = ashita.memory.read_uint32(pWeather + 0x02);
-    return ashita.memory.read_uint8(pointer + 0);
-end
-
-function GetMoon()
-    local timestamp = GetTimestamp();
-    local moon_index = ((timestamp.day + 26) % 84) + 1;
-    local moon_table = {};
-    moon_table.MoonPhase = data.MoonPhase[moon_index];
-    moon_table.MoonPhasePercent = data.MoonPhasePercent[moon_index];
-    return moon_table;
 end
 
 ----------------------------------------------------------------------------------------------------
@@ -343,16 +326,6 @@ local function render_general_config(settings)
     imgui.InputInt('Display Timeout', hxiclam.settings.display_timeout);
     imgui.ShowHelp(
         'How long should the display window stay open after the last dig.');
-
-    local pos = {hxiclam.settings.x[1], hxiclam.settings.y[1]};
-    if (imgui.InputInt2('Position', pos)) then
-        hxiclam.settings.x[1] = pos[1];
-        hxiclam.settings.y[1] = pos[2];
-    end
-    imgui.ShowHelp('The position of HXIClam on screen.');
-
-    imgui.Checkbox('Moon Display', hxiclam.settings.moon_display);
-    imgui.ShowHelp('Toggles if moon phase / percent is shown.');
     imgui.Checkbox('Reset Rewards On Load', hxiclam.settings.reset_on_load);
     imgui.ShowHelp(
         'Toggles whether we reset rewards each time the addon is loaded.');
@@ -396,6 +369,11 @@ local function render_general_config(settings)
                    hxiclam.settings.clamming.bucket_subtract);
     imgui.ShowHelp(
         'Toggles if bucket costs are automatically subtracted from gil earned.');
+    imgui.SameLine();
+    imgui.SliderFloat('Weight Font Scale',
+                      hxiclam.settings.bucket_weight_font_scale, 0.1, 2.0,
+                      '%.3f');
+    imgui.ShowHelp('The scaling of the font size for bucket weight.');
     imgui.InputInt('Warning Weight Limit',
                    hxiclam.settings.bucket_weight_warn_threshold);
     imgui.ShowHelp(
@@ -415,10 +393,7 @@ local function render_general_config(settings)
     imgui.ColorEdit4('Dig Timer Ready Color',
                      hxiclam.settings.dig_timer_ready_color);
     imgui.ShowHelp('The color dig timer will turn when it reaches Dig Ready.');
-    imgui.SliderFloat('Weight Font Scale',
-                      hxiclam.settings.bucket_weight_font_scale, 0.1, 2.0,
-                      '%.3f');
-    imgui.ShowHelp('The scaling of the font size for bucket weight.');
+
     imgui.EndChild();
 end
 
@@ -839,9 +814,6 @@ ashita.events.register('d3d_present', 'present_cb', function()
 
         local total_worth = 0;
         local bucket_total = 0;
-        local moon_table = GetMoon();
-        local moon_phase = moon_table.MoonPhase;
-        local moon_percent = moon_table.MoonPhasePercent;
 
         imgui.SetWindowFontScale(hxiclam.settings.font_scale[1] + 0.1);
         imgui.Text('Bucket Stats:');
@@ -949,10 +921,6 @@ ashita.events.register('d3d_present', 'present_cb', function()
                            format_int(hxiclam.settings.bucket_count *
                                           hxiclam.settings.clamming.bucket_cost[1]));
             imgui.Text('Items Dug: ' .. tostring(hxiclam.settings.item_count));
-            if (hxiclam.settings.moon_display[1]) then
-                imgui.Text('Moon: ' .. moon_phase .. ' (' ..
-                               tostring(moon_percent) .. '%%)');
-            end
             imgui.Separator();
 
             for k, v in pairs(hxiclam.settings.rewards) do
