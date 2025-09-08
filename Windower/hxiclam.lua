@@ -493,7 +493,8 @@ end);
 windower.register_event('incoming text',
                         function(original, modified, original_mode,
                                  modified_mode, blocked)
-    if (original_mode == 142 or original_mode == 150 or original_mode == 151) then
+    if (original_mode == 142 or original_mode == 148 or original_mode == 150 or
+        original_mode == 151) then
         local message = string.lower(original);
         message = string.strip_colors(message);
 
