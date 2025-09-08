@@ -5,7 +5,7 @@
 * Testing on local server: !pos -371 -1 -421 4
 --]] addon.name = 'hxiclam';
 addon.author = 'jimmy58663';
-addon.version = '1.2.5';
+addon.version = '1.2.6';
 addon.desc = 'HorizonXI clamming tracker addon.';
 addon.link = 'https://github.com/jimmy58663/HXIClam';
 addon.commands = {'/hxiclam'};

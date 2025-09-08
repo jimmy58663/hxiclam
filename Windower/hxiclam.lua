@@ -27,7 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --]] -- Testing on local server: !pos -371 -1 -421 4
 _addon.name = 'hxiclam';
 _addon.author = 'jimmy58663';
-_addon.version = '1.2.5';
+_addon.version = '1.2.6';
 -- _addon.desc      = 'HorizonXI clamming tracker addon.';
 -- _addon.link      = 'https://github.com/jimmy58663/HXIClam';
 _addon.commands = {'hxiclam'};
