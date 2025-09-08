@@ -24,7 +24,8 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
 ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
---]] _addon.name = 'hxiclam';
+--]] -- Testing on local server: !pos -371 -1 -421 4
+_addon.name = 'hxiclam';
 _addon.author = 'jimmy58663';
 _addon.version = '1.2.5';
 -- _addon.desc      = 'HorizonXI clamming tracker addon.';
