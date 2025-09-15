@@ -52,6 +52,7 @@ local default_settings = T {
     session_view = 1, -- 0 no session stats, 1 session summary, 2 session details
 
     bucket = {},
+    bucket_is_active = false,
     bucket_weight = 0,
     bucket_capacity = 50,
     bucket_weight_warn_color = {1.0, 1.0, 0.0, 1.0}, -- yellow
@@ -745,6 +746,9 @@ ashita.events.register('text_in', 'text_in_cb', function(e)
 
     -- Update last attempt timestamp if any clamming action occurs
     -- show hxiclam once a clamming action occurs
+    if (bucket) then hxiclam.settings.bucket_is_active = true
+    elseif (bucket_turnin) then hxiclam.settings.bucket_is_active = false end
+
     if (bucket or item or bucket_turnin or overweight or incident) then
         hxiclam.last_attempt = ashita.time.clock()['ms']
         if (hxiclam.settings.first_attempt == 0) then
@@ -875,6 +879,12 @@ ashita.events.register('d3d_present', 'present_cb', function()
 
         imgui.SetWindowFontScale(hxiclam.settings.font_scale[1] + 0.1);
         imgui.Text('Bucket Stats:');
+        imgui.SameLine()
+        if (hxiclam.settings.bucket_is_active) then
+            imgui.TextColored(hxiclam.settings.dig_timer_ready_color, 'ACTIVE')
+        else
+            imgui.TextColored(hxiclam.settings.bucket_weight_crit_color, 'INACTIVE')
+        end
         imgui.SetWindowFontScale(hxiclam.settings.bucket_weight_font_scale[1]);
         imgui.Text('Bucket Weight: ');
         imgui.SameLine();
@@ -956,9 +966,9 @@ ashita.events.register('d3d_present', 'present_cb', function()
             if hxiclam.settings.enable_item_color[1] then
                 if (itemPrice == 0) then
                     imgui.TextColored(hxiclam.settings.zero_value_item_color,
-                                      text);
+                    text);
                 elseif (itemPrice >= hxiclam.settings.mid_tier_gil_threshold[1] and
-                    itemPrice < hxiclam.settings.high_tier_gil_threshold[1]) then
+                itemPrice < hxiclam.settings.high_tier_gil_threshold[1]) then
                     imgui.TextColored(hxiclam.settings.mid_tier_item_color, text);
                 elseif (itemPrice >= hxiclam.settings.high_tier_gil_threshold[1]) then
                     imgui.TextColored(hxiclam.settings.high_tier_item_color,
