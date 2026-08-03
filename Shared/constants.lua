@@ -278,4 +278,41 @@ data.ItemWeightIndex = T {
     [35] = "sack of white sand:7"
 };
 
+-- Clamming item draw rates. Probabilities sourced from:
+-- https://horizonffxi.wiki/Sushomi%27s_Clamming_Guide
+-- Percentages are rounded and normalized at runtime before expected value is calculated.
+data.ItemProbabilityIndex = T {
+    [1] = "bibiki slug:9.2",
+    [2] = "handful of fish scales:4.6",
+    [3] = "handful of pugil scales:4.4",
+    [4] = "bibiki urchin:1.1",
+    [5] = "broken willow fishing rod:2.1",
+    [6] = "coral fragment:0.9",
+    [7] = "crab shell:2.1",
+    [8] = "elm log:0.6",
+    [9] = "suit of goblin armor:2.3",
+    [10] = "suit of goblin mail:2.1",
+    [11] = "goblin mask:2.2",
+    [12] = "loaf of hobgoblin bread:2.3",
+    [13] = "hobgoblin pie:2.3",
+    [14] = "high-quality crab shell:0.4",
+    [15] = "handful of high-quality pugil scales:1.6",
+    [16] = "lacquer tree log:0.5",
+    [17] = "maple log:1.2",
+    [18] = "nebimonite:2.4",
+    [19] = "piece of oxblood:0.5",
+    [20] = "clump of pamtam kelp:6.7",
+    [21] = "petrified log:0.5",
+    [22] = "seashell:2.5",
+    [23] = "shall shell:4.9",
+    [24] = "titanictus shell:1.2",
+    [25] = "turtle shell:1.0",
+    [26] = "uragnite shell:0.6",
+    [27] = "vongola clam:5.5",
+    [28] = "pebble:20.7",
+    [29] = "sack of white sand:2.9",
+    [30] = "jacknife:9.4",
+    [31] = "tropical clam:1.4"
+};
+
 return data
