@@ -326,7 +326,7 @@ local function render_general_config(settings)
     imgui.BeginChild('settings_general', {
         0,
         imgui.GetTextLineHeightWithSpacing() * ((MAX_HEIGHT_IN_LINES / 3) + 1)
-    }, true, ImGuiWindowFlags_AlwaysAutoResize);
+    }, ImGuiChildFlags_None, ImGuiWindowFlags_AlwaysAutoResize);
     if (imgui.Checkbox('Visible', hxiclam.settings.visible)) then
         -- if the checkbox is interacted with, reset the last_attempt
         -- to force the window back open
@@ -377,7 +377,7 @@ local function render_general_config(settings)
     imgui.Text('Clamming Display Settings');
     imgui.BeginChild('clam_general', {
         0, imgui.GetTextLineHeightWithSpacing() * MAX_HEIGHT_IN_LINES * 2 / 3
-    }, true, ImGuiWindowFlags_AlwaysAutoResize);
+    }, ImGuiChildFlags_None, ImGuiWindowFlags_AlwaysAutoResize);
     if (imgui.RadioButton('Hide Session Stats',
                           hxiclam.settings.session_view == 0)) then
         hxiclam.settings.session_view = 0;
@@ -484,7 +484,7 @@ local function render_item_price_config(settings)
     imgui.Text('Item Prices');
     imgui.BeginChild('settings_general', {
         0, imgui.GetTextLineHeightWithSpacing() * MAX_HEIGHT_IN_LINES
-    }, true, ImGuiWindowFlags_AlwaysAutoResize);
+    }, ImGuiChildFlags_None, ImGuiWindowFlags_AlwaysAutoResize);
 
     imgui.InputInt('Bucket Cost', hxiclam.settings.clamming.bucket_cost);
     imgui.ShowHelp('Cost of a single bucket.');
@@ -508,7 +508,7 @@ local function render_item_weight_config(settings)
     imgui.Text('Item Weights');
     imgui.BeginChild('settings_general', {
         0, imgui.GetTextLineHeightWithSpacing() * MAX_HEIGHT_IN_LINES
-    }, true, ImGuiWindowFlags_AlwaysAutoResize);
+    }, ImGuiChildFlags_None, ImGuiWindowFlags_AlwaysAutoResize);
 
     local temp_strings = T {};
     temp_strings[1] = table.concat(hxiclam.settings.item_weight_index, '\n');
