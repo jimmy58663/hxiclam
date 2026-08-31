@@ -1,0 +1,43 @@
+name: Package Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  package-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Build release archives
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+
+          version="${RELEASE_TAG#v}"
+          mkdir -p build/ashita/hxiclam/tones build/windower/hxiclam/tones build/zips
+
+          cp Ashita_v4/hxiclam.lua Ashita_v4/README.md build/ashita/hxiclam/
+          cp Windower/hxiclam.lua Windower/README.md build/windower/hxiclam/
+          cp Shared/constants.lua Shared/tone_attributions.txt build/ashita/hxiclam/
+          cp Shared/constants.lua Shared/tone_attributions.txt build/windower/hxiclam/
+          cp Shared/tones/* build/ashita/hxiclam/tones/
+          cp Shared/tones/* build/windower/hxiclam/tones/
+
+          (cd build/ashita && zip -r -9 "../zips/hxiclam-ashitav4.3-${version}.zip" hxiclam)
+          (cd build/windower && zip -r -9 "../zips/hxiclam-windower-${version}.zip" hxiclam)
+
+      - name: Upload release archives
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$RELEASE_TAG" build/zips/*.zip --clobber
