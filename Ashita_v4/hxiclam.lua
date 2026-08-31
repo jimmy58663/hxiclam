@@ -5,7 +5,7 @@
 * Testing on local server: !pos -371 -1 -421 4
 --]] addon.name = 'hxiclam';
 addon.author = 'jimmy58663';
-addon.version = '2.0.0';
+addon.version = '2.0.1';
 addon.desc = 'HorizonXI clamming tracker addon.';
 addon.link = 'https://github.com/jimmy58663/HXIClam';
 addon.commands = {'/hxiclam'};
@@ -97,6 +97,9 @@ local hxiclam = T {
     weights = T {},
     gil_per_hour = 0,
 
+    debug_mode = false,
+    debug_count = 0,
+    debug_limit = 25,
     play_tone = false
 };
 
@@ -230,7 +233,10 @@ local function print_help(isError)
     local cmds = T {
         {'/hxiclam', 'Toggles the HXIClam editor.'},
         {'/hxiclam edit', 'Toggles the HXIClam editor.'},
-        {'/hxiclam save', 'Saves the current settings to disk.'},
+        {
+            '/hxiclam debug',
+            'Toggles chat mode debug output for troubleshooting.'
+        }, {'/hxiclam save', 'Saves the current settings to disk.'},
         {'/hxiclam reload', 'Reloads the current settings from disk.'},
         {'/hxiclam clear', 'Clears the HXIClam bucket and session stats.'},
         {'/hxiclam clear bucket', 'Clears the HXIClam bucket stats.'},
@@ -660,6 +666,17 @@ ashita.events.register('command', 'command_cb', function(e)
         return;
     end
 
+    -- Handle: /hxiclam debug - Toggles mode debug output while testing chat filters.
+    if (#args >= 2 and args[2]:any('debug')) then
+        hxiclam.debug_mode = not hxiclam.debug_mode;
+        hxiclam.debug_count = 0;
+        print(chat.header(addon.name):append(chat.message(
+                                                 hxiclam.debug_mode and
+                                                     'Debug mode enabled.' or
+                                                     'Debug mode disabled.')));
+        return;
+    end
+
     -- Handle: /hxiclam save - Saves the current settings.
     if (#args >= 2 and args[2]:any('save')) then
         update_pricing();
@@ -751,6 +768,35 @@ end);
 -- Parse Digging Items + Main Logic
 ----------------------------------------------------------------------------------------------------
 ashita.events.register('text_in', 'text_in_cb', function(e)
+    local mode_id = bit.band(e.mode_modified, 0x000000FF);
+    if (hxiclam.debug_mode and type(e.message) == 'string') then
+        if (hxiclam.debug_count < hxiclam.debug_limit) then
+            local log_path = ('%s/addons/hxiclam/debug_modes.log'):fmt(
+                                 AshitaCore:GetInstallPath());
+            local file = io.open(log_path, 'a');
+            if (file ~= nil) then
+                file:write(('[%s] mode_id=%d message=%s\n'):fmt(os.date(
+                                                                    '%H:%M:%S'),
+                                                                mode_id,
+                                                                e.message));
+                file:close();
+            end
+            hxiclam.debug_count = hxiclam.debug_count + 1;
+        else
+            hxiclam.debug_mode = false;
+            print(chat.header(addon.name):append(chat.message(
+                                                     'Debug limit reached; debug mode disabled.')));
+        end
+    end
+
+    -- Ignore user-controlled chat channels. Clamming messages are emitted by the
+    -- game/system in NPC or message-box modes, not by player say/shout/yell or
+    -- linkshell/party chatter.
+    local ignored_modes = T {
+        1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14, 157, 212, 214, 220, 222
+    };
+    if (ignored_modes:hasval(mode_id)) then return; end
+
     local last_attempt_secs =
         (ashita.time.clock()['ms'] - hxiclam.last_attempt) / 1000.0;
     local message = e.message;
