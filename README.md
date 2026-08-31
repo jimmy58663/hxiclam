@@ -15,3 +15,22 @@ All existing items in HorizonXI's clamming pool are included in the default sett
 ## Questions
 If you are having issues or have any questions you can try the [Wiki](https://github.com/jimmy58663/hxiclam/wiki "HXIClam WIki").
 My contact info is listed in the Wiki also for anything that you still need help with.
+
+## Ignored Chat Channels
+To stop other players from griefing I have attempted to filter out chat channels that accept user input. Known chat channels filtered:
+
+| Channel | Send ID | Receive ID |
+| --- | ---: | ---: |
+| Say | 1 | 9 |
+| Shout | 2 | 10 |
+| Yell | 3 | 11 |
+| Tell | 4 | 12 |
+| Party | 5 | 13 |
+| Linkshell | 6 | 14 |
+| Command Error |  | 157 |
+| Linkshell 2 |  | 214 |
+| Unity |  | 212 |
+| Assist JP |  | 220 |
+| Assist EN |  | 222 |
+
+If you find additional channels that are causing issues, whether you know the name or the mode, please [open an issue](https://github.com/jimmy58663/hxiclam/issues) with the details.
