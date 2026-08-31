@@ -27,7 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --]] -- Testing on local server: !pos -371 -1 -421 4
 _addon.name = 'hxiclam';
 _addon.author = 'jimmy58663';
-_addon.version = '2.0.0';
+_addon.version = '2.0.1';
 -- _addon.desc      = 'HorizonXI clamming tracker addon.';
 -- _addon.link      = 'https://github.com/jimmy58663/HXIClam';
 _addon.commands = {'hxiclam'};
@@ -117,6 +117,9 @@ local hxiclam = T {
     pricing = T {},
     weights = T {},
     gil_per_hour = 0,
+    debug_mode = false,
+    debug_count = 0,
+    debug_limit = 25,
 
     -- Session data
     bucket = {},
@@ -223,7 +226,10 @@ local function print_help(isError)
     end
 
     local cmds = T {
-        {'//hxiclam save', 'Saves the current settings to disk.'},
+        {
+            '//hxiclam debug',
+            'Toggles chat mode debug output for troubleshooting.'
+        }, {'//hxiclam save', 'Saves the current settings to disk.'},
         {'//hxiclam reload', 'Reloads the current settings from disk.'},
         {'//hxiclam clear', 'Clears the HXIClam bucket and session stats.'},
         {'//hxiclam clear bucket', 'Clears the HXIClam bucket stats.'},
@@ -493,92 +499,111 @@ end);
 windower.register_event('incoming text',
                         function(original, modified, original_mode,
                                  modified_mode, blocked)
-    if (original_mode == 142 or original_mode == 148 or original_mode == 150 or
-        original_mode == 151) then
-        local message = string.lower(original);
-        message = string.strip_colors(message);
-
-        local bucket = string.match(message, "obtained key item: clamming kit");
-        local item = string.match(message,
-                                  "you find a[n]? (.*) and toss it into your bucket.*");
-        local bucket_upgrade = string.match(message,
-                                            "your clamming capacity has increased to (%d+) ponzes!");
-        local bucket_turnin = string.match(message,
-                                           "you return the clamming kit");
-        local overweight = string.match(message,
-                                        ".*for the bucket and its bottom breaks.*");
-        local incident = string.match(message,
-                                      ".*somthing jumps into your bucket.*"); -- need an example text of this
-
-        -- Update last attempt timestamp if any clamming action occurs
-        -- show hxiclam once a clamming action occurs
-        if (bucket or item or bucket_turnin or overweight or incident) then
-            hxiclam.last_attempt = os.time();
-            if (hxiclam.first_attempt == 0) then
-                hxiclam.first_attempt = os.time();
+    if (hxiclam.debug_mode and type(original) == 'string') then
+        if (hxiclam.debug_count < hxiclam.debug_limit) then
+            local file = io.open(('%sdebug_modes.log'):format(
+                                     windower.addon_path), 'a');
+            if (file ~= nil) then
+                file:write(('[%s] mode_id=%d message=%s\n'):format(os.date(
+                                                                       '%H:%M:%S'),
+                                                                   original_mode,
+                                                                   original));
+                file:close();
             end
-            if (hxiclam.settings.visible[1] == false) then
-                hxiclam.settings.visible[1] = true;
-            end
+            hxiclam.debug_count = hxiclam.debug_count + 1;
+        else
+            hxiclam.debug_mode = false;
+            notice('Debug limit reached; debug mode disabled.');
         end
-
-        -- Clear bucket and add to bucket count when a bucket is obtained.
-        if (bucket) then
-            clear_bucket();
-            hxiclam.bucket_count = hxiclam.bucket_count + 1;
-        elseif (item) then
-            hxiclam.play_tone = true;
-            -- Update last dig time and reset dig_timer
-            hxiclam.settings.last_dig = os.time();
-
-            if (hxiclam.settings.dig_timer_countdown) then
-                hxiclam.settings.dig_timer = 10;
-            else
-                hxiclam.settings.dig_timer = 0;
-            end
-
-            -- Update bucket weight
-            if (hxiclam.weights[item] ~= nil) then
-                hxiclam.bucket_weight = hxiclam.bucket_weight +
-                                            hxiclam.weights[item];
-            end
-
-            -- Update bucket item list
-            if (hxiclam.bucket[item] == nil) then
-                hxiclam.bucket[item] = 1;
-            elseif (hxiclam.bucket[item] ~= nil) then
-                hxiclam.bucket[item] = hxiclam.bucket[item] + 1;
-            end
-
-            -- Log the item
-            if (hxiclam.settings.enable_logging[1]) then
-                WriteLog('drop', item);
-            end
-        elseif (bucket_upgrade) then
-            hxiclam.bucket_capacity = bucket_upgrade;
-        elseif (bucket_turnin) then
-            if (hxiclam.bucket ~= nil and hxiclam.bucket ~= {}) then
-                for k, v in pairs(hxiclam.bucket) do
-                    hxiclam.item_count = hxiclam.item_count + v;
-                    if (hxiclam.rewards[k] == nil) then
-                        hxiclam.rewards[k] = v;
-                    elseif (hxiclam.rewards[k] ~= nil) then
-                        hxiclam.rewards[k] = hxiclam.rewards[k] + v
-                    end
-
-                    -- Log the items turned in
-                    if (hxiclam.settings.enable_logging[1]) then
-                        for i = 1, v do
-                            WriteLog('turnin', k);
-                        end
-                    end
-                end
-                clear_bucket();
-            end
-        end
-
-        if (overweight or incident) then clear_bucket(); end
     end
+
+    -- Ignore player-controlled chat channels. These are user-generated and can be
+    -- spoofed to fake clamming drops.
+    local ignored_modes = T {
+        1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14, 157, 212, 214, 220, 222
+    };
+    if (ignored_modes:contains(original_mode)) then return; end
+
+    local message = string.lower(original);
+    message = string.strip_colors(message);
+
+    local bucket = string.match(message, "obtained key item: clamming kit");
+    local item = string.match(message,
+                              "you find a[n]? (.*) and toss it into your bucket.*");
+    local bucket_upgrade = string.match(message,
+                                        "your clamming capacity has increased to (%d+) ponzes!");
+    local bucket_turnin = string.match(message, "you return the clamming kit");
+    local overweight = string.match(message,
+                                    ".*for the bucket and its bottom breaks.*");
+    local incident =
+        string.match(message, ".*somthing jumps into your bucket.*"); -- need an example text of this
+
+    -- Update last attempt timestamp if any clamming action occurs
+    -- show hxiclam once a clamming action occurs
+    if (bucket or item or bucket_turnin or overweight or incident) then
+        hxiclam.last_attempt = os.time();
+        if (hxiclam.first_attempt == 0) then
+            hxiclam.first_attempt = os.time();
+        end
+        if (hxiclam.settings.visible[1] == false) then
+            hxiclam.settings.visible[1] = true;
+        end
+    end
+
+    -- Clear bucket and add to bucket count when a bucket is obtained.
+    if (bucket) then
+        clear_bucket();
+        hxiclam.bucket_count = hxiclam.bucket_count + 1;
+    elseif (item) then
+        hxiclam.play_tone = true;
+        -- Update last dig time and reset dig_timer
+        hxiclam.settings.last_dig = os.time();
+
+        if (hxiclam.settings.dig_timer_countdown) then
+            hxiclam.settings.dig_timer = 10;
+        else
+            hxiclam.settings.dig_timer = 0;
+        end
+
+        -- Update bucket weight
+        if (hxiclam.weights[item] ~= nil) then
+            hxiclam.bucket_weight = hxiclam.bucket_weight +
+                                        hxiclam.weights[item];
+        end
+
+        -- Update bucket item list
+        if (hxiclam.bucket[item] == nil) then
+            hxiclam.bucket[item] = 1;
+        elseif (hxiclam.bucket[item] ~= nil) then
+            hxiclam.bucket[item] = hxiclam.bucket[item] + 1;
+        end
+
+        -- Log the item
+        if (hxiclam.settings.enable_logging[1]) then
+            WriteLog('drop', item);
+        end
+    elseif (bucket_upgrade) then
+        hxiclam.bucket_capacity = bucket_upgrade;
+    elseif (bucket_turnin) then
+        if (hxiclam.bucket ~= nil and hxiclam.bucket ~= {}) then
+            for k, v in pairs(hxiclam.bucket) do
+                hxiclam.item_count = hxiclam.item_count + v;
+                if (hxiclam.rewards[k] == nil) then
+                    hxiclam.rewards[k] = v;
+                elseif (hxiclam.rewards[k] ~= nil) then
+                    hxiclam.rewards[k] = hxiclam.rewards[k] + v
+                end
+
+                -- Log the items turned in
+                if (hxiclam.settings.enable_logging[1]) then
+                    for i = 1, v do WriteLog('turnin', k); end
+                end
+            end
+            clear_bucket();
+        end
+    end
+
+    if (overweight or incident) then clear_bucket(); end
 end);
 
 windower.register_event('prerender', function()
