@@ -56,6 +56,12 @@ This would set the weight for pebbles at 7 pz. Make sure there are no spaces or 
 
 If you update the weights while in game, make sure to use the **/hxiclam update** or **/hxiclam update weights** command to update the weights.
 
+## Expected Value Settings
+- `count_free_bucket`: When enabled, a safe dig that lands within five pz of the next bucket upgrade adds 500 gil to that outcome.
+- `do_not_use_fourth_bucket`: When enabled, the 145-150 pz range does not receive the free-bucket bonus.
+
+Both settings default to `true`. Use `//hxiclam reload` after changing them.
+
 ## Questions
 If you are having issues or have any questions you can try the [Wiki](https://github.com/jimmy58663/hxiclam/wiki "HXIClam WIki").
 My contact info is listed in the Wiki also for anything that you still need help with.

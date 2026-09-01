@@ -43,7 +43,12 @@ local default_settings = T {
     enable_logging = T {true},
 
     -- Clamming Display Settings
-    clamming = T {bucket_cost = T {500}, bucket_subtract = T {true}},
+    clamming = T {
+        bucket_cost = T {500},
+        bucket_subtract = T {true},
+        count_free_bucket = T {true},
+        do_not_use_fourth_bucket = T {true}
+    },
     reset_on_load = T {false},
     first_attempt = 0,
     rewards = {},
@@ -55,7 +60,7 @@ local default_settings = T {
     bucket_weight = 0,
     bucket_capacity = 50,
     bucket_weight_warn_color = {1.0, 1.0, 0.0, 1.0}, -- yellow
-    bucket_weight_warn_threshold = T {20},
+    bucket_weight_warn_threshold = T {19},
     bucket_weight_crit_color = {1.0, 0.0, 0.0, 1.0}, -- red
     bucket_weight_crit_threshold = T {7},
     dig_timer_ready_color = {0.0, 1.0, 0.0, 1.0}, -- green
@@ -95,6 +100,7 @@ local hxiclam = T {
     last_attempt = ashita.time.clock()['ms'],
     pricing = T {},
     weights = T {},
+    probabilities = T {},
     gil_per_hour = 0,
 
     debug_mode = false,
@@ -270,6 +276,139 @@ local function update_pricing()
     end
 end
 
+local function update_probabilities()
+    hxiclam.probabilities = T {};
+    local total_percent = 0;
+
+    for _, entry in pairs(data.ItemProbabilityIndex) do
+        local parts = split(entry, ':');
+        local itemname = parts[1];
+        local percent = tonumber(parts[2]) or 0;
+        hxiclam.probabilities[itemname] = percent;
+        total_percent = total_percent + percent;
+    end
+
+    if (total_percent > 0) then
+        for itemname, percent in pairs(hxiclam.probabilities) do
+            hxiclam.probabilities[itemname] = percent / total_percent;
+        end
+    end
+end
+
+local function get_bucket_contents_value()
+    local value = 0;
+    local bucket = hxiclam.settings.bucket;
+    for itemname, count in pairs(bucket) do
+        local price = tonumber(hxiclam.pricing[itemname]) or 0;
+        value = value + (price * tonumber(count));
+    end
+    return value;
+end
+
+local function qualifies_for_free_bucket(new_weight, capacity)
+    if (not hxiclam.settings.clamming.count_free_bucket[1]) then return false; end
+    if (capacity == 50) then return new_weight >= 45 and new_weight <= 50; end
+    if (capacity == 100) then return new_weight >= 95 and new_weight <= 100; end
+    if (capacity == 150 and not hxiclam.settings.clamming.do_not_use_fourth_bucket[1]) then
+        return new_weight >= 145 and new_weight <= 150;
+    end
+    return false;
+end
+
+local function should_turn_in_bucket()
+    local current_weight = tonumber(hxiclam.settings.bucket_weight) or 0;
+    local capacity = tonumber(hxiclam.settings.bucket_capacity) or 50;
+
+    if (capacity == 50) then
+        return current_weight >= 45 and current_weight <= 50;
+    end
+    if (capacity == 100) then
+        return current_weight >= 95 and current_weight <= 100;
+    end
+    if (capacity == 150) then
+        return current_weight >= 145 and current_weight <= 150;
+    end
+
+    return false;
+end
+
+local function is_next_dig_safe()
+    local current_weight = tonumber(hxiclam.settings.bucket_weight) or 0;
+    local capacity = tonumber(hxiclam.settings.bucket_capacity) or 50;
+
+    for itemname, probability in pairs(hxiclam.probabilities) do
+        if (probability > 0) then
+            local item_weight = tonumber(hxiclam.weights[itemname]);
+            if (item_weight ~= nil and current_weight + item_weight > capacity) then
+                return false;
+            end
+        end
+    end
+
+    return true;
+end
+
+local function calculate_expected_value()
+    local current_weight = tonumber(hxiclam.settings.bucket_weight) or 0;
+    local capacity = tonumber(hxiclam.settings.bucket_capacity) or 50;
+    local current_value = get_bucket_contents_value();
+    local expected_value = 0;
+    local bust_probability = 0;
+
+    for itemname, probability in pairs(hxiclam.probabilities) do
+        local item_weight = tonumber(hxiclam.weights[itemname]);
+        if (item_weight ~= nil) then
+            local new_weight = current_weight + item_weight;
+            if (new_weight > capacity) then
+                bust_probability = bust_probability + probability;
+                expected_value = expected_value - (current_value * probability);
+            else
+                local reward_value = tonumber(hxiclam.pricing[itemname]) or 0;
+                if (qualifies_for_free_bucket(new_weight, capacity)) then
+                    reward_value = reward_value + 500;
+                end
+                expected_value = expected_value + (reward_value * probability);
+            end
+        end
+    end
+
+    return expected_value, bust_probability;
+end
+
+local function round_nearest(number)
+    if (number >= 0) then return math.floor(number + 0.5); end
+    return math.ceil(number - 0.5);
+end
+
+local function get_expected_value_color(expected_value)
+    local saturation = 500;
+    local strength = math.min(math.abs(expected_value) / saturation, 1);
+
+    if (expected_value >= 0) then
+        return 1 - strength, 1, 1 - strength;
+    end
+    return 1 - (strength * 0.37), 1 - strength, 1 - strength;
+end
+
+local function get_expected_value_display()
+    local ready_color = hxiclam.settings.dig_timer_ready_color;
+
+    if (should_turn_in_bucket()) then
+        return 'TURN IN', ready_color[1], ready_color[2], ready_color[3];
+    end
+
+    if (is_next_dig_safe()) then
+        return 'DIG!!!', ready_color[1], ready_color[2], ready_color[3];
+    end
+
+    local expected_value, bust_probability = calculate_expected_value();
+    local rounded_expected_value = round_nearest(expected_value);
+    local rounded_bust_percent = string.format('%.1f', bust_probability * 100);
+    local red, green, blue = get_expected_value_color(expected_value);
+    return format_int(rounded_expected_value) .. 'g', red, green, blue,
+           rounded_bust_percent;
+end
+
 local function update_weights()
     local itemname;
     local itemvalue;
@@ -293,7 +432,7 @@ end
 
 local function update_tones()
     hxiclam.settings.available_tones = T {};
-    local tone_path = ("%stones/"):format(addon.path);
+    local tone_path = ("%sShared/tones/"):format(addon.path);
     local cmd = 'dir "' .. tone_path .. '" /B';
     local idx = 1;
     for file in io.popen(cmd):lines() do
@@ -318,8 +457,8 @@ end
 
 local function play_sound()
     if (hxiclam.settings.enable_tone[1] == true and hxiclam.play_tone == true) then
-        ashita.misc.play_sound(("%stones/%s"):format(addon.path,
-                                                     hxiclam.settings.tone));
+        ashita.misc.play_sound(("%sShared/tones/%s"):format(addon.path,
+                                                               hxiclam.settings.tone));
         hxiclam.play_tone = false;
     end
 end
@@ -356,8 +495,8 @@ local function render_general_config(settings)
     end
     imgui.SameLine();
     if (imgui.ArrowButton("Tone_Test", ImGuiDir_Right)) then
-        ashita.misc.play_sound(("%stones/%s"):format(addon.path,
-                                                     hxiclam.settings.tone));
+        ashita.misc.play_sound(("%sShared/tones/%s"):format(addon.path,
+                                                               hxiclam.settings.tone));
     end
     imgui.SliderFloat('Opacity', hxiclam.settings.opacity, 0.125, 1.0, '%.3f');
     imgui.ShowHelp('The opacity of the HXIClam window.');
@@ -415,6 +554,14 @@ local function render_general_config(settings)
                    hxiclam.settings.clamming.bucket_subtract);
     imgui.ShowHelp(
         'Toggles if bucket costs are automatically subtracted from gil earned.');
+    imgui.Checkbox('Expected Value: Count a free bucket as worth 500 gil',
+                   hxiclam.settings.clamming.count_free_bucket);
+    imgui.ShowHelp(
+        'Adds 500 gil to safe dig outcomes that land within five pz of the next bucket upgrade.');
+    imgui.Checkbox('Expected Value: Do not use 4th bucket',
+                   hxiclam.settings.clamming.do_not_use_fourth_bucket);
+    imgui.ShowHelp(
+        'When enabled, landing at 145-150 pz does not count as earning a free bucket.');
     imgui.InputInt('Warning Weight Limit',
                    hxiclam.settings.bucket_weight_warn_threshold);
     imgui.ShowHelp(
@@ -618,6 +765,7 @@ settings.register('settings', 'settings_update', function(s)
     settings.save();
     update_pricing();
     update_weights();
+    update_probabilities();
 end);
 
 --[[
@@ -627,6 +775,7 @@ end);
 ashita.events.register('load', 'load_cb', function()
     update_pricing();
     update_weights();
+    update_probabilities();
     update_tones();
     if (hxiclam.settings.reset_on_load[1]) then
         print('Reset bucket and session on reload.');
@@ -1023,6 +1172,17 @@ ashita.events.register('d3d_present', 'present_cb', function()
             end
         else
             imgui.Text(tostring(format_int(bucket_total) .. 'g'));
+        end
+
+        imgui.Text('Expected Value:');
+        imgui.SameLine();
+        local ev_text, ev_red, ev_green, ev_blue, bust_percent =
+            get_expected_value_display();
+        imgui.TextColored({ev_red, ev_green, ev_blue, 1.0}, ev_text);
+        if (bust_percent ~= nil) then
+            imgui.SameLine();
+            imgui.TextColored({1.0, 0.0, 0.0, 1.0},
+                              '(' .. tostring(bust_percent) .. '%% to bust)');
         end
 
         imgui.Separator();

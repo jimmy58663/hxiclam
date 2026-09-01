@@ -5,6 +5,8 @@ The addon is more complete in the Ashita version due to originally being develop
 
 All existing items in HorizonXI's clamming pool are included in the default settings, but if something is ever missing it can be added in the settings.
 
+To install, copy the relevant hxiclam.lua file from your chosen framework's directory to the main hxiclam directory, and copy the constants.lua file from the shared directory to the main hxiclam directory. Then load in game with /addon load hxiclam.
+
 ## Screenshots
 ### Ashita v4
 ![Alt text](/Media/hxiclam_1.png?raw=true)
